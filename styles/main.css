@@ -1,0 +1,128 @@
+/* --- Google Fonts --- */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+/* --- NOUVELLE PALETTE DE COULEURS ET VARIABLES --- */
+:root {
+    --primary-color: #6a11cb;
+    --secondary-color: #2575fc;
+    --gradient-bg: linear-gradient(120deg, var(--primary-color), var(--secondary-color));
+    --bg-color: #f0f2f5;
+    --card-bg: #ffffff;
+    --text-color: #333;
+    --subtle-text-color: #777;
+    --shadow: 0 10px 20px rgba(0,0,0,0.1), 0 3px 6px rgba(0,0,0,0.08);
+    --border-radius: 12px;
+    --priority-critique: #ff4d4f;
+    --priority-haute: #faad14;
+    --status-en-cours: #1890ff;
+    --status-termine: #b0b0b0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.7;
+    padding-top: 80px;
+}
+
+/* --- HEADER AVEC GRADIENT --- */
+header {
+    background: var(--gradient-bg);
+    color: white;
+    padding: 18px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+}
+header h1 { font-weight: 700; letter-spacing: 1px; }
+#logout-btn { background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 20px; cursor: pointer; transition: all 0.3s ease; }
+#logout-btn:hover { background: white; color: var(--primary-color); }
+
+h2 { font-size: 2em; font-weight: 600; margin-bottom: 30px; color: var(--primary-color); }
+
+/* --- MISE EN PAGE GÉNÉRALE --- */
+#app-container { padding: 30px; max-width: 1400px; margin: 0 auto; }
+section { margin-bottom: 40px; padding: 30px; background-color: transparent; border: none; box-shadow: none; }
+
+/* --- STYLE DES CARTES --- */
+.tasks-container, .requests-container { display: grid; gap: 25px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.task-card, .request-card {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    box-shadow: var(--shadow);
+    border: 1px solid #e8e8e8;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    animation: fadeIn 0.5s ease-out;
+}
+.task-card:hover { transform: translateY(-5px); box-shadow: 0 15px 25px rgba(0,0,0,0.12), 0 5px 10px rgba(0,0,0,0.1); }
+.task-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px; background-color: #ddd; }
+.task-card.priority-Critique::before { background-color: var(--priority-critique); }
+.task-card.priority-Haute::before { background-color: var(--priority-haute); }
+.task-card.status-En_cours::before { background-color: var(--status-en-cours); }
+.task-card.status-Termine { opacity: 0.7; }
+.task-card.status-Termine::before { background-color: var(--status-termine); }
+.task-card h4 { font-size: 1.2em; font-weight: 600; margin-bottom: 15px; }
+.task-card p { font-size: 0.9em; color: var(--subtle-text-color); margin-bottom: 8px; }
+.task-card p strong { color: var(--text-color); }
+
+/* --- FORMULAIRES ET BOUTONS MODERNES --- */
+.form-card { background: var(--card-bg); padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); }
+input, textarea, select { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; font-family: 'Poppins', sans-serif; transition: border-color 0.3s ease, box-shadow 0.3s ease; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.2); }
+button { background: var(--gradient-bg); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+button:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+
+/* --- ANIMATIONS ET TRANSITIONS --- */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.task-details {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-in-out;
+}
+.task-details.hidden {
+    max-height: 0;
+}
+.task-card:not(.hidden) .task-details:not(.hidden) {
+    max-height: 500px; /* Valeur suffisamment grande */
+}
+
+/* --- BOUTON FLOTTANT (FAB) --- */
+#fab-add-request {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--gradient-bg);
+    color: white;
+    font-size: 2.5em;
+    line-height: 60px;
+    text-align: center;
+    border: none;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+#fab-add-request:hover {
+    transform: scale(1.1);
+}
+
+
+.hidden { display: none !important; }
