@@ -94,6 +94,11 @@ input, textarea, select {
 
 .hidden { display: none !important; }
 
+.admin-comment {
+    background-color: #f0f8ff; /* AliceBlue */
+    border-left: 3px solid var(--secondary-color);
+}
+
 /* --- Styles originaux --- */
 #app-container { padding: 20px; }
 section { margin-bottom: 30px; padding: 20px; background-color: var(--card-bg); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }

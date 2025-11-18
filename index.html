@@ -24,6 +24,7 @@
                 <input type="email" id="email" placeholder="Email" required>
                 <input type="password" id="password" placeholder="Mot de passe" required>
                 <button type="submit">Se Connecter</button>
+                <p id="login-error" class="error-message"></p>
             </form>
         </section>
 
@@ -38,10 +39,35 @@
                     <option value="">Assigner à...</option>
                 </select>
                 <input type="date" id="task-deadline" required>
+                <select id="task-priority" required>
+                    <option value="Normale">Normale</option>
+                    <option value="Haute">Haute</option>
+                    <option value="Critique">Critique</option>
+                </select>
                 <button id="submit-new-task">Ajouter Tâche</button>
+                <p id="task-form-error" class="error-message"></p>
             </div>
             <h3>Toutes les Tâches (Admin)</h3>
+            <div class="filters">
+                <select id="filter-status">
+                    <option value="all">Tous les statuts</option>
+                    <option value="A_faire">À faire</option>
+                    <option value="En_cours">En cours</option>
+                    <option value="Termine">Terminé</option>
+                </select>
+                <select id="filter-priority">
+                    <option value="all">Toutes les priorités</option>
+                    <option value="Normale">Normale</option>
+                    <option value="Haute">Haute</option>
+                    <option value="Critique">Critique</option>
+                </select>
+            </div>
             <div id="admin-tasks-list" class="tasks-container"></div>
+
+            <hr>
+
+            <h3>Demandes des Membres</h3>
+            <div id="admin-requests-list" class="requests-container"></div>
         </section>
 
         <section id="member-view" class="hidden">
@@ -60,10 +86,13 @@
                 </select>
                 <textarea id="request-details" placeholder="Détails de la demande"></textarea>
                 <button type="submit">Soumettre la Demande</button>
+                <p id="request-form-error" class="error-message"></p>
             </form>
             
             <h3>Mes Demandes en cours</h3>
             <div id="member-requests-list" class="requests-container"></div>
+
+            <button id="fab-add-request">+</button>
         </section>
 
     </main>
