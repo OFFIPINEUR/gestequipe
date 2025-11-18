@@ -95,7 +95,44 @@
             <button id="fab-add-request">+</button>
         </section>
 
+        <section id="super-admin-view" class="hidden">
+            <h2>Tableau de Bord Super Admin</h2>
+            <div class="form-card">
+                <h3>Enregistrer un Nouvel Utilisateur</h3>
+                <form id="create-user-form">
+                    <input type="text" id="new-user-name" placeholder="Nom complet" required>
+                    <input type="email" id="new-user-email" placeholder="Email professionnel" required>
+                    <input type="password" id="new-user-password" placeholder="Mot de passe temporaire" required>
+                    <select id="new-user-department" required>
+                        <option value="">Choisir un département...</option>
+                    </select>
+                    <select id="new-user-role" required>
+                        <option value="">Choisir un rôle...</option>
+                    </select>
+                    <button type="submit">Enregistrer Utilisateur</button>
+                    <p id="create-user-error" class="error-message"></p>
+                </form>
+            </div>
+
+            <h3>Utilisateurs Existants</h3>
+            <div id="super-admin-users-list" class="users-container"></div>
+        </section>
+
     </main>
+
+    <div id="task-report-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3>Rapport de Tâche</h3>
+            <form id="task-report-form">
+                <input type="hidden" id="task-report-task-id">
+                <textarea id="task-report-content" placeholder="Rédigez votre rapport ici..." required></textarea>
+                <label for="task-attachment">Joindre un fichier :</label>
+                <input type="file" id="task-attachment">
+                <button type="submit">Soumettre le Rapport</button>
+            </form>
+        </div>
+    </div>
 
     <script src="scripts/app.js"></script>
 </body>
