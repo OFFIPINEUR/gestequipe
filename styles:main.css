@@ -1,0 +1,142 @@
+/* --- VARIABLES ET RESET --- */
+:root {
+    --primary-color: #4CAF50; /* Vert pour l'action */
+    --secondary-color: #2196F3; /* Bleu pour l'information */
+    --bg-color: #f4f7f6;
+    --card-bg: #ffffff;
+    --text-color: #333;
+    --shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+/* --- HEADER ET NAVIGATION --- */
+header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow);
+}
+
+header h1 {
+    font-size: 1.5em;
+}
+
+#logout-btn {
+    background-color: #ff5722; /* Rouge pour le danger/déconnexion */
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* --- CONTENEUR PRINCIPAL --- */
+#app-container {
+    padding: 20px;
+}
+
+/* --- VUES ET CARTES (Cards) --- */
+section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+h2 {
+    color: var(--primary-color);
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+/* --- FORMULAIRES ET BOUTONS --- */
+input, textarea, select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+button {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #1976D2;
+}
+
+/* --- LISTE DE TÂCHES (Le cœur du design) --- */
+.tasks-container, .requests-container {
+    display: grid;
+    gap: 15px;
+}
+
+.task-card, .request-card {
+    background-color: #fff;
+    border-left: 5px solid var(--primary-color);
+    padding: 15px;
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+}
+
+.task-card.statut-Termine {
+    border-left-color: #aaa;
+    opacity: 0.7;
+}
+
+.task-card h4 {
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.task-card p {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+/* --- MEDIA QUERIES (RESPONSIVE DESIGN) --- */
+
+/* Pour les écrans plus larges que le mobile (tablettes et ordinateurs) */
+@media (min-width: 600px) {
+    #app-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .tasks-container {
+        /* Affichage en grille pour les grands écrans */
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+    header h1 {
+        font-size: 2em;
+    }
+}
+
+.hidden {
+    display: none !important;
+}

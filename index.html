@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkFlow - Gestion d'Équipe</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="favicon.png" type="image/png">
+</head>
+<body>
+    <header>
+        <h1>WorkFlow 🚀</h1>
+        <div id="user-info">
+            <span id="user-role"></span>
+            <button id="logout-btn">Déconnexion</button>
+        </div>
+    </header>
+
+    <main id="app-container">
+        <section id="login-view" class="active">
+            <h2>Connexion</h2>
+            <form id="login-form">
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Mot de passe" required>
+                <button type="submit">Se Connecter</button>
+            </form>
+        </section>
+
+        <section id="admin-view" class="hidden">
+            <h2>Tableau de Bord Admin</h2>
+            <button id="show-task-form">Créer Tâche</button>
+            <div id="task-creation-form" class="hidden form-card">
+                <h3>Nouvelle Tâche</h3>
+                <input type="text" id="task-title" placeholder="Titre" required>
+                <textarea id="task-description" placeholder="Description"></textarea>
+                <select id="task-assigned-to">
+                    <option value="">Assigner à...</option>
+                </select>
+                <input type="date" id="task-deadline" required>
+                <button id="submit-new-task">Ajouter Tâche</button>
+            </div>
+            <h3>Toutes les Tâches (Admin)</h3>
+            <div id="admin-tasks-list" class="tasks-container"></div>
+        </section>
+
+        <section id="member-view" class="hidden">
+            <h2>Mes Tâches</h2>
+            <div id="member-tasks-list" class="tasks-container"></div>
+            
+            <hr>
+            
+            <h2>Faire une Demande</h2>
+            <form id="request-form" class="form-card">
+                <input type="text" id="request-title" placeholder="Titre de la demande" required>
+                <select id="request-type" required>
+                    <option value="Support">Support Technique</option>
+                    <option value="Conges">Demande de Congés</option>
+                    <option value="Materiel">Matériel</option>
+                </select>
+                <textarea id="request-details" placeholder="Détails de la demande"></textarea>
+                <button type="submit">Soumettre la Demande</button>
+            </form>
+            
+            <h3>Mes Demandes en cours</h3>
+            <div id="member-requests-list" class="requests-container"></div>
+        </section>
+
+    </main>
+
+    <script src="scripts/app.js"></script>
+</body>
+</html>
