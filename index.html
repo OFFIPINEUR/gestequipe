@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WorkFlow - Gestion d'Équipe</title>
     <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/chat.css">
     <!-- FullCalendar CSS -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <link rel="manifest" href="manifest.json">
@@ -15,6 +16,9 @@
         <h1 class="header__title">WorkFlow</h1>
         <div id="user-info" class="header__user-info">
             <span id="user-role"></span>
+            <div id="chat-icon" class="header__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-message-square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
             <button id="logout-btn" class="button button--outline">Déconnexion</button>
         </div>
     </header>
@@ -263,5 +267,30 @@
 
     <!-- Script principal de l'application -->
     <script src="scripts/app.js"></script>
+    <script src="scripts/chat.js"></script>
+
+    <!-- Fenêtre de Chat -->
+    <div id="chat-container" class="chat-container hidden">
+        <div class="chat-header">
+            <h3 class="chat-header__title">WorkFlow Chat</h3>
+            <button id="close-chat-btn" class="chat-header__close">&times;</button>
+        </div>
+        <div class="chat-main">
+            <div id="chat-sidebar" class="chat-sidebar">
+                <!-- La liste des contacts sera chargée ici -->
+            </div>
+            <div id="chat-content" class="chat-content">
+                <div id="chat-messages" class="chat-messages">
+                    <!-- Les messages s'afficheront ici -->
+                </div>
+                <form id="chat-input-form" class="chat-input-form">
+                    <input type="text" id="chat-message-input" class="form__input" placeholder="Écrire un message..." autocomplete="off">
+                    <button type="submit" class="button button--primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
