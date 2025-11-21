@@ -65,45 +65,6 @@ async function addTask(taskData) {
 }
 
 /**
- * Écoute les mises à jour des messages pour un chat donné.
- * @param {string} chatId
- * @param {function} callback
- */
-function onMessagesUpdate(chatId, callback) {
-    db.collection('chats').doc(chatId).collection('messages')
-      .orderBy('timestamp', 'asc')
-      .onSnapshot(snapshot => {
-        const messages = [];
-        snapshot.forEach(doc => {
-            messages.push({ id: doc.id, ...doc.data() });
-        });
-        callback(messages);
-    });
-}
-
-/**
- * Envoie un message de chat.
- * @param {string} senderId
- * @param {string} receiverId
- * @param {string} text
- */
-async function sendMessage(senderId, receiverId, text) {
-    try {
-        const chatId = [senderId, receiverId].sort().join('_');
-        await db.collection('chats').doc(chatId).collection('messages').add({
-            senderId,
-            receiverId,
-            text,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        return { success: true };
-    } catch (error) {
-        console.error("Erreur lors de l'envoi du message:", error);
-        return { success: false, message: error.message };
-    }
-}
-
-/**
  * Supprime une tâche de Firestore.
  * @param {string} taskId
  */
