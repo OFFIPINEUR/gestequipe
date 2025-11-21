@@ -1,165 +1,215 @@
-/* --- Google Fonts --- */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+/* ==========================================================================
+   1. GENERAL STYLES
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* --- NOUVELLE PALETTE DE COULEURS ET VARIABLES --- */
 :root {
-    --primary-color: #6a11cb;
-    --secondary-color: #2575fc;
-    --gradient-bg: linear-gradient(120deg, var(--primary-color), var(--secondary-color));
-    --bg-color: #f0f2f5;
-    --card-bg: #ffffff;
-    --text-color: #333;
-    --subtle-text-color: #777;
-    --shadow: 0 10px 20px rgba(0,0,0,0.1), 0 3px 6px rgba(0,0,0,0.08);
-    --border-radius: 12px;
-    --priority-critique: #ff4d4f;
-    --priority-haute: #faad14;
-    --status-en-cours: #1890ff;
-    --status-termine: #b0b0b0;
+    --font-family: 'Inter', sans-serif;
+    --background-color: #f8f9fa;
+    --primary-color: #4a69bd;
+    --secondary-color: #1e3799;
+    --text-color: #343a40;
+    --light-text-color: #6c757d;
+    --border-color: #dee2e6;
+    --card-background: #ffffff;
+    --shadow: 0 4px 6px rgba(0,0,0,0.1);
+    --border-radius-sm: 8px;
+    --border-radius-md: 12px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
 body {
-    font-family: 'Poppins', sans-serif;
-    background-color: var(--bg-color);
+    font-family: var(--font-family);
+    background-color: var(--background-color);
     color: var(--text-color);
-    line-height: 1.7;
-    padding-top: 80px;
+    line-height: 1.6;
 }
 
-/* --- HEADER AVEC GRADIENT --- */
-header {
-    background: var(--gradient-bg);
-    color: white;
-    padding: 18px 30px;
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================================================
+   2. LAYOUT
+   ========================================================================== */
+main {
+    padding: 2rem;
+}
+
+section {
+    margin-bottom: 2rem;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+/* ==========================================================================
+   3. HEADER
+   ========================================================================== */
+.header {
+    background-color: var(--card-background);
+    padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    position: fixed;
-    top: 0;
-    left: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header__title {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+/* ==========================================================================
+   4. FORMS & BUTTONS
+   ========================================================================== */
+.form-card {
+    background-color: var(--card-background);
+    padding: 2rem;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow);
+}
+
+.form__label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form__input {
     width: 100%;
-    z-index: 1000;
-}
-header h1 { font-weight: 700; letter-spacing: 1px; }
-#logout-btn { background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 20px; cursor: pointer; transition: all 0.3s ease; }
-#logout-btn:hover { background: white; color: var(--primary-color); }
-
-h2 { font-size: 2em; font-weight: 600; margin-bottom: 30px; color: var(--primary-color); }
-
-/* --- MISE EN PAGE GÉNÉRALE --- */
-#app-container { padding: 30px; max-width: 1400px; margin: 0 auto; }
-section { margin-bottom: 40px; padding: 30px; background-color: transparent; border: none; box-shadow: none; }
-
-/* --- STYLE DES CARTES --- */
-.tasks-container, .requests-container, .users-container { display: grid; gap: 25px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
-.task-card, .request-card, .user-card {
-    background-color: var(--card-bg);
-    border-radius: var(--border-radius);
-    padding: 25px;
-    box-shadow: var(--shadow);
-    border: 1px solid #e8e8e8;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    animation: fadeIn 0.5s ease-out;
-}
-.task-card:hover, .request-card:hover, .user-card:hover { transform: translateY(-5px); box-shadow: 0 15px 25px rgba(0,0,0,0.12), 0 5px 10px rgba(0,0,0,0.1); }
-.task-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px; background-color: #ddd; }
-.task-card.priority-Critique::before { background-color: var(--priority-critique); }
-.task-card.priority-Haute::before { background-color: var(--priority-haute); }
-.task-card.status-En_cours::before { background-color: var(--status-en-cours); }
-.task-card.status-Termine { opacity: 0.7; }
-.task-card.status-Termine::before { background-color: var(--status-termine); }
-.task-card h4, .request-card h4, .user-card h4 { font-size: 1.2em; font-weight: 600; margin-bottom: 15px; }
-.task-card p, .request-card p, .user-card p { font-size: 0.9em; color: var(--subtle-text-color); margin-bottom: 8px; }
-.task-card p strong, .request-card p strong, .user-card p strong { color: var(--text-color); }
-
-/* --- FORMULAIRES ET BOUTONS MODERNES --- */
-.form-card { background: var(--card-bg); padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); }
-input, textarea, select { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; font-family: 'Poppins', sans-serif; transition: border-color 0.3s ease, box-shadow 0.3s ease; }
-input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.2); }
-button { background: var(--gradient-bg); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-button:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-
-/* --- SECTION CHAT --- */
-.chat-section {
-    margin-top: 20px;
-    border-top: 1px solid #eee;
-    padding-top: 15px;
-}
-.comments-list {
-    max-height: 150px;
-    overflow-y: auto;
-    margin-bottom: 10px;
-}
-.comments-list p {
-    padding: 8px 12px;
-    border-radius: 18px;
-    margin-bottom: 8px;
-    max-width: 80%;
-    word-wrap: break-word;
-}
-.admin-comment {
-    background-color: #e6f7ff;
-    border: 1px solid #91d5ff;
-    align-self: flex-start;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: 1rem;
 }
 
-.chat-timestamp {
-    font-size: 0.8em;
-    color: #888;
-    margin-left: 8px;
+.form__input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(74, 105, 189, 0.2);
 }
 
-/* --- FENÊTRE MODALE --- */
-.modal { position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
-.modal-content { background-color: #fefefe; margin: auto; padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); width: 90%; max-width: 500px; animation: fadeIn 0.3s; }
-.close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-.close-button:hover, .close-button:focus { color: black; }
-
-
-/* --- ANIMATIONS ET TRANSITIONS --- */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-.task-details {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.5s ease-in-out;
-}
-.task-details.hidden {
-    max-height: 0;
-}
-.task-card:not(.hidden) .task-details:not(.hidden) {
-    max-height: 500px; /* Valeur suffisamment grande */
-}
-
-/* --- BOUTON FLOTTANT (FAB) --- */
-#fab-add-request {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: var(--gradient-bg);
+.button {
+    background-color: var(--primary-color);
     color: white;
-    font-size: 2.5em;
-    line-height: 60px;
-    text-align: center;
     border: none;
-    box-shadow: var(--shadow);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius-sm);
     cursor: pointer;
-    transition: transform 0.3s ease;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease-in-out;
 }
 
-#fab-add-request:hover {
-    transform: scale(1.1);
+.button:hover {
+    background-color: var(--secondary-color);
 }
 
+.button--outline {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
 
-.hidden { display: none !important; }
+.button--outline:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* ==========================================================================
+   5. CARDS
+   ========================================================================== */
+.task-card, .request-card, .user-card, .metric-card, .priority-card {
+    background-color: var(--card-background);
+    border-radius: var(--border-radius-md);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.task-card:hover, .request-card:hover, .user-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0,0,0,0.1);
+}
+
+.user-card.disabled {
+    opacity: 0.5;
+}
+
+/* ==========================================================================
+   6. MODAL
+   ========================================================================== */
+.modal {
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal__content {
+    background-color: var(--card-background);
+    padding: 2rem;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow);
+    width: 90%;
+    max-width: 500px;
+}
+
+.modal__close-button {
+    color: var(--light-text-color);
+    float: right;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.modal__close-button:hover, .modal__close-button:focus {
+    color: var(--text-color);
+}
+
+/* ==========================================================================
+   7. FAB
+   ========================================================================== */
+.fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.fab:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.05);
+}
