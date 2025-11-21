@@ -12,21 +12,13 @@ const DEPARTMENTS = {
     TECH: 'Technique'
 };
 
-// --- SIMULATION DE BASE DE DONNÉES ---
-let USERS = JSON.parse(localStorage.getItem('users')) || {
-    'super.admin@ibiocosmetics.com': { id: 'u0', name: 'Super Admin', role: ROLES.SUPER_ADMIN, password: 'password', department: null, active: true },
-    'admin.tech@ibiocosmetics.com': { id: 'u1', name: 'Admin Tech', role: ROLES.ADMIN, password: 'password', department: DEPARTMENTS.TECH, active: true },
-    'employe.tech@ibiocosmetics.com': { id: 'u2', name: 'Employé Tech', role: ROLES.EMPLOYE, password: 'password', department: DEPARTMENTS.TECH, active: true },
-    'comptable@ibiocosmetics.com': { id: 'u3', name: 'Comptable Finance', role: ROLES.EMPLOYE, password: 'password', department: DEPARTMENTS.FINANCE, active: true },
-};
+// --- DONNÉES DE L'APPLICATION ---
+let currentUser = null; // L'objet utilisateur connecté sera stocké ici
 
-let TASKS = JSON.parse(localStorage.getItem('tasks')) || [
-    { id: 't1', title: 'Vérification du stock', description: 'Compter tous les produits A en entrepôt.', status: 'En_cours', assignedToId: 'u2', deadline: '2025-12-20', creatorId: 'u1', priority: 'Haute', comments: [], report: null, attachment: null },
-];
-
-let REQUESTS = JSON.parse(localStorage.getItem('requests')) || [
-    { id: 'r1', title: 'Demande de congés', type: 'Conges', details: 'Du 25 au 30 Décembre.', status: 'En_attente', submitterId: 'u2', observations: null, assignedToId: null }
-];
+// Données temporaires en attendant Firestore
+let USERS = {};
+let TASKS = [];
+let REQUESTS = [];
 
 // --- Éléments du DOM ---
 const views = {
@@ -43,7 +35,7 @@ const newUserRoleSelect = document.getElementById('new-user-role');
 const superAdminUsersList = document.getElementById('super-admin-users-list');
 const memberTasksList = document.getElementById('member-tasks-list');
 const adminRequestsList = document.getElementById('admin-requests-list');
-const adminTasksList = document.getElementById('admin-tasks-list');
+const adminTasksListView = document.getElementById('admin-tasks-list-view');
 const taskReportModal = document.getElementById('task-report-modal');
 const taskReportForm = document.getElementById('task-report-form');
 const editTaskModal = document.getElementById('edit-task-modal');
@@ -64,18 +56,6 @@ const adminDashboardMetrics = document.getElementById('admin-dashboard-metrics')
 const memberPriorities = document.getElementById('member-priorities');
 
 // --- FONCTIONS UTILITAIRES ---
-function saveState() {
-    localStorage.setItem('users', JSON.stringify(USERS));
-    localStorage.setItem('tasks', JSON.stringify(TASKS));
-    localStorage.setItem('requests', JSON.stringify(REQUESTS));
-}
-
-function getCurrentUser() {
-    const email = localStorage.getItem('currentUserEmail');
-    const user = USERS[email];
-    return user && user.active ? user : null;
-}
-
 function hideAllViews() {
     Object.values(views).forEach(view => view.classList.add('hidden'));
 }
@@ -91,35 +71,57 @@ function showMessage(elementId, message, isError = true) {
 
 // --- GESTION DES VUES ---
 function renderApp(user) {
+    currentUser = user; // Met à jour l'utilisateur courant global
     hideAllViews();
-    if (!user) {
+
+    if (!currentUser) {
         views.login.classList.remove('hidden');
+        document.getElementById('user-info').classList.add('hidden');
         return;
     }
 
-    if (user.role === ROLES.SUPER_ADMIN) {
+    document.getElementById('user-info').classList.remove('hidden');
+    document.getElementById('user-role').textContent = `${currentUser.name} (${currentUser.role})`;
+
+    if (currentUser.role === ROLES.SUPER_ADMIN) {
         views.superAdmin.classList.remove('hidden');
-        renderSuperAdminDashboard();
-    } else if (user.role === ROLES.ADMIN) {
+        onUsersUpdate(users => {
+            USERS = users;
+            renderSuperAdminDashboard();
+        });
+    } else if (currentUser.role === ROLES.ADMIN) {
         views.admin.classList.remove('hidden');
-        renderAdminDashboard();
-    } else {
+        onUsersUpdate(users => {
+            USERS = users;
+            onTasksUpdate(currentUser.department, tasks => {
+                TASKS = tasks;
+                onRequestsUpdate(currentUser.department, requests => {
+                    REQUESTS = requests;
+                    renderAdminDashboard();
+                });
+            });
+        });
+    } else { // EMPLOYE
         views.member.classList.remove('hidden');
-        renderEmployeDashboard();
+        onTasksUpdate(currentUser.department, tasks => {
+            TASKS = tasks.filter(t => t.assignedToId === currentUser.uid);
+            onRequestsUpdate(currentUser.department, requests => {
+                REQUESTS = requests.filter(r => r.submitterId === currentUser.uid);
+                renderEmployeDashboard();
+            });
+        });
     }
 }
 
 function renderAdminDashboard() {
-    const currentUser = getCurrentUser();
     const departmentMembers = Object.values(USERS).filter(u => u.department === currentUser.department && u.active);
-    const departmentMemberIds = departmentMembers.map(u => u.id);
 
-    let departmentTasks = Object.values(TASKS).filter(t => departmentMemberIds.includes(t.assignedToId));
+    let departmentTasks = TASKS; // Déjà filtré par département dans onTasksUpdate
 
     // Metrics
     const tasksInProgress = departmentTasks.filter(t => t.status === 'En_cours').length;
     const overdueTasks = departmentTasks.filter(t => new Date(t.deadline) < new Date() && t.status !== 'Termine').length;
-    const pendingRequests = Object.values(REQUESTS).filter(r => departmentMemberIds.includes(r.submitterId) && r.status === 'En_attente').length;
+    const pendingRequests = REQUESTS.filter(r => r.status === 'En_attente').length;
     adminDashboardMetrics.innerHTML = `
         <div class="metric-card">
             <h4>Tâches en cours</h4>
@@ -146,24 +148,29 @@ function renderAdminDashboard() {
     if (assigneeFilter !== 'all') departmentTasks = departmentTasks.filter(t => t.assignedToId === assigneeFilter);
     if (keywordFilter) departmentTasks = departmentTasks.filter(t => t.title.toLowerCase().includes(keywordFilter) || t.description.toLowerCase().includes(keywordFilter));
 
-    adminTasksList.innerHTML = '';
-    departmentTasks.forEach(task => adminTasksList.appendChild(renderTask(task, ROLES.ADMIN)));
+    const adminTasksListView = document.getElementById('admin-tasks-list-view');
+    adminTasksListView.innerHTML = '';
+    departmentTasks.forEach(task => adminTasksListView.appendChild(renderTask(task, ROLES.ADMIN)));
 
+    // Mettre à jour la vue Kanban si elle est visible
+    if (!document.getElementById('admin-tasks-kanban-view').classList.contains('hidden')) {
+        renderKanbanView(departmentTasks);
+    }
+
+    const adminRequestsList = document.getElementById('admin-requests-list');
     adminRequestsList.innerHTML = '';
-    const departmentRequests = Object.values(REQUESTS).filter(r => departmentMemberIds.includes(r.submitterId));
-    departmentRequests.forEach(req => adminRequestsList.appendChild(renderRequest(req)));
+    REQUESTS.forEach(req => adminRequestsList.appendChild(renderRequest(req)));
 
     taskAssignedToSelect.innerHTML = '<option value="">Assigner à...</option>';
     filterAssigneeSelect.innerHTML = '<option value="all">Tous les membres</option>';
     departmentMembers.filter(u => u.role === ROLES.EMPLOYE).forEach(emp => {
-        taskAssignedToSelect.innerHTML += `<option value="${emp.id}">${emp.name}</option>`;
-        filterAssigneeSelect.innerHTML += `<option value="${emp.id}">${emp.name}</option>`;
+        taskAssignedToSelect.innerHTML += `<option value="${emp.uid}">${emp.name}</option>`;
+        filterAssigneeSelect.innerHTML += `<option value="${emp.uid}">${emp.name}</option>`;
     });
 }
 
 function renderEmployeDashboard() {
-    const currentUser = getCurrentUser();
-    const myTasks = Object.values(TASKS).filter(t => t.assignedToId === currentUser.id);
+    const myTasks = TASKS; // Déjà filtré dans onTasksUpdate
 
     // Priorities
     const today = new Date();
@@ -188,8 +195,7 @@ function renderEmployeDashboard() {
     myTasks.forEach(task => memberTasksList.appendChild(renderTask(task, ROLES.EMPLOYE)));
 
     memberRequestsList.innerHTML = '';
-    const myRequests = Object.values(REQUESTS).filter(r => r.submitterId === currentUser.id);
-    myRequests.forEach(req => {
+    REQUESTS.forEach(req => {
         const reqEl = document.createElement('div');
         reqEl.className = 'request-card';
         reqEl.innerHTML = `<h4>${req.title}</h4><p>Statut: ${req.status}</p>`;
@@ -200,7 +206,7 @@ function renderEmployeDashboard() {
 function renderTask(task, userRole) {
     const taskEl = document.createElement('div');
     taskEl.className = `task-card status-${task.status} priority-${task.priority}`;
-    const creator = Object.values(USERS).find(u => u.id === task.creatorId);
+    const creator = USERS[task.creatorId];
     let taskHTML = `<h4>${task.title}</h4>
         <p><strong>Statut:</strong> ${task.status.replace('_', ' ')}</p>
         <p><strong>Date Limite:</strong> ${task.deadline}</p>
@@ -214,10 +220,26 @@ function renderTask(task, userRole) {
     if (task.attachment) {
         taskHTML += `<p><strong>Pièce jointe:</strong> ${task.attachment}</p>`;
     }
-    taskHTML += `</div>`;
+    taskHTML += `
+        <div class="subtasks-section">
+            <h5>Sous-tâches</h5>
+            <div class="subtasks-list">
+                ${(task.subtasks || []).map((sub, index) => `
+                    <div class="subtask-item">
+                        <input type="checkbox" id="subtask-${task.id}-${index}" ${sub.done ? 'checked' : ''} onchange="toggleSubtask('${task.id}', ${index})">
+                        <label for="subtask-${task.id}-${index}">${sub.text}</label>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="add-subtask-form">
+                <input type="text" id="new-subtask-${task.id}" class="form__input--inline" placeholder="Ajouter une sous-tâche...">
+                <button onclick="addSubtask('${task.id}')" class="button button--primary button--sm">+</button>
+            </div>
+        </div>
+    </div>`;
     taskEl.innerHTML = taskHTML;
 
-    taskEl.addEventListener('click', () => taskEl.querySelector('.task-details').classList.toggle('hidden'));
+    taskEl.querySelector('h4').addEventListener('click', () => taskEl.querySelector('.task-details').classList.toggle('hidden'));
 
     if (userRole === ROLES.EMPLOYE && task.status === 'En_cours') {
         const completeBtn = document.createElement('button');
@@ -245,8 +267,8 @@ function renderTask(task, userRole) {
     chatSection.className = 'chat-section';
     chatSection.innerHTML = `
         <div class="comments-list">
-            ${task.comments.map(c => `<p class="${c.role === ROLES.ADMIN ? 'admin-comment' : ''}">
-                <strong>${c.userName}:</strong> ${c.text}
+            ${(task.comments || []).map(c => `<p class="${c.role === ROLES.ADMIN ? 'admin-comment' : ''}">
+                <strong>${c.userName}:</strong> ${c.htmlText || c.text}
                 <span class="chat-timestamp">(${c.timestamp || ''})</span>
             </p>`).join('')}
         </div>
@@ -258,24 +280,64 @@ function renderTask(task, userRole) {
     return taskEl;
 }
 
-function addComment(taskId) {
-    const input = document.getElementById(`comment-${taskId}`);
+async function addSubtask(taskId) {
+    const input = document.getElementById(`new-subtask-${taskId}`);
     const text = input.value.trim();
     if (text) {
         const task = TASKS.find(t => t.id === taskId);
-        const currentUser = getCurrentUser();
         if (task) {
+            const newSubtask = { text, done: false };
+            const updatedSubtasks = [...(task.subtasks || []), newSubtask];
+            await updateTask(taskId, { subtasks: updatedSubtasks });
+            input.value = '';
+        }
+    }
+}
+
+async function toggleSubtask(taskId, subtaskIndex) {
+    const task = TASKS.find(t => t.id === taskId);
+    if (task && task.subtasks && task.subtasks[subtaskIndex]) {
+        const updatedSubtasks = [...task.subtasks];
+        updatedSubtasks[subtaskIndex].done = !updatedSubtasks[subtaskIndex].done;
+        await updateTask(taskId, { subtasks: updatedSubtasks });
+    }
+}
+
+async function addComment(taskId) {
+    const input = document.getElementById(`comment-${taskId}`);
+    let text = input.value.trim();
+    if (text && currentUser) {
+        const task = TASKS.find(t => t.id === taskId);
+        if (task) {
+            // Détection des mentions
+            const mentions = text.match(/@(\w+)/g);
+            if (mentions) {
+                mentions.forEach(mention => {
+                    const userName = mention.substring(1);
+                    const user = Object.values(USERS).find(u => u.name.toLowerCase() === userName.toLowerCase());
+                    if (user) {
+                        console.log(`Notification simulée: L'utilisateur ${currentUser.name} vous a mentionné dans la tâche "${task.title}"`);
+                        text = text.replace(mention, `<strong>${mention}</strong>`);
+                    }
+                });
+            }
+
             const timestamp = new Date().toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-            task.comments.push({
-                userId: currentUser.id,
+            const newComment = {
+                userId: currentUser.uid,
                 userName: currentUser.name,
                 role: currentUser.role,
-                text,
+                htmlText: text, // Stocker le texte avec HTML
                 timestamp
-            });
-            input.value = '';
-            saveState();
-            renderApp(currentUser);
+            };
+            const updatedComments = [...task.comments, newComment];
+            const result = await updateTask(taskId, { comments: updatedComments });
+            if (result.success) {
+                input.value = '';
+                // Le rendu se met à jour automatiquement
+            } else {
+                showMessage(`comment-error-${taskId}`, 'Erreur envoi commentaire.');
+            }
         }
     }
 }
@@ -283,9 +345,9 @@ function addComment(taskId) {
 function renderRequest(req) {
     const requestEl = document.createElement('div');
     requestEl.className = 'request-card';
-    const submitter = Object.values(USERS).find(u => u.id === req.submitterId);
+    const submitter = USERS[req.submitterId];
     let requestHTML = `<h4>${req.title}</h4>
-        <p><strong>Demandeur:</strong> ${submitter.name}</p>
+        <p><strong>Demandeur:</strong> ${submitter ? submitter.name : 'Inconnu'}</p>
         <p><strong>Statut:</strong> ${req.status}</p>
         <p>${req.details}</p>`;
 
@@ -293,12 +355,12 @@ function renderRequest(req) {
         requestHTML += `<p><strong>Observations:</strong> ${req.observations}</p>`;
     }
     if (req.assignedToId) {
-        const assignedUser = Object.values(USERS).find(u => u.id === req.assignedToId);
-        requestHTML += `<p><strong>Réassigné à:</strong> ${assignedUser.name}</p>`;
+        const assignedUser = USERS[req.assignedToId];
+        requestHTML += `<p><strong>Réassigné à:</strong> ${assignedUser ? assignedUser.name : 'Inconnu'}</p>`;
     }
     requestEl.innerHTML = requestHTML;
 
-    if (getCurrentUser().role === ROLES.ADMIN && req.status === 'En_attente') {
+    if (currentUser.role === ROLES.ADMIN && req.status === 'En_attente') {
         const observationInput = document.createElement('textarea');
         observationInput.placeholder = "Ajouter une observation...";
         observationInput.className = 'form__input';
@@ -317,12 +379,12 @@ function renderRequest(req) {
         requestEl.appendChild(rejectBtn);
     }
 
-    if (getCurrentUser().role === ROLES.ADMIN && req.status === 'Approuve' && !req.assignedToId) {
+    if (currentUser.role === ROLES.ADMIN && req.status === 'Approuve' && !req.assignedToId) {
         const reassignSelect = document.createElement('select');
         reassignSelect.className = 'form__input';
         reassignSelect.innerHTML = '<option value="">Réassigner à...</option>';
-        Object.values(USERS).forEach(user => {
-            reassignSelect.innerHTML += `<option value="${user.id}">${user.name}</option>`;
+        Object.values(USERS).filter(u => u.department === currentUser.department).forEach(user => {
+            reassignSelect.innerHTML += `<option value="${user.uid}">${user.name}</option>`;
         });
         requestEl.appendChild(reassignSelect);
 
@@ -336,22 +398,15 @@ function renderRequest(req) {
     return requestEl;
 }
 
-function updateRequestStatus(reqId, newStatus, observations) {
-    const request = REQUESTS.find(r => r.id === reqId);
-    if (request) {
-        request.status = newStatus;
-        request.observations = observations;
-        saveState();
-        renderApp(getCurrentUser());
-    }
+async function updateRequestStatus(reqId, newStatus, observations) {
+    await updateRequest(reqId, { status: newStatus, observations });
+    // Le rendu se met à jour automatiquement grâce à onSnapshot
 }
 
-function reassignRequest(reqId, assignedToId) {
-    const request = REQUESTS.find(r => r.id === reqId);
-    if (request && assignedToId) {
-        request.assignedToId = assignedToId;
-        saveState();
-        renderApp(getCurrentUser());
+async function reassignRequest(reqId, assignedToId) {
+    if (assignedToId) {
+        await updateRequest(reqId, { assignedToId });
+        // Le rendu se met à jour automatiquement grâce à onSnapshot
     }
 }
 
@@ -398,45 +453,43 @@ window.addEventListener('click', (event) => {
     }
 });
 
-taskReportForm.addEventListener('submit', (e) => {
+taskReportForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const taskId = document.getElementById('task-report-task-id').value;
     const reportContent = document.getElementById('task-report-content').value;
     const attachmentInput = document.getElementById('task-attachment');
 
-    const task = TASKS.find(t => t.id === taskId);
-    if (task) {
-        task.status = 'Termine';
-        task.report = reportContent;
-        if (attachmentInput.files.length > 0) {
-            task.attachment = attachmentInput.files[0].name;
-        }
-        saveState();
-        closeTaskReportModal();
-        renderApp(getCurrentUser());
+    const updateData = {
+        status: 'Termine',
+        report: reportContent
+    };
+    if (attachmentInput.files.length > 0) {
+        updateData.attachment = attachmentInput.files[0].name;
+        // Ici, il faudrait uploader le fichier sur Firebase Storage,
+        // pour l'instant on ne stocke que le nom.
     }
+    await updateTask(taskId, updateData);
+    closeTaskReportModal();
 });
 
-editTaskForm.addEventListener('submit', (e) => {
+editTaskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const taskId = document.getElementById('edit-task-id').value;
-    const task = TASKS.find(t => t.id === taskId);
-    if (task) {
-        task.title = document.getElementById('edit-task-title').value;
-        task.description = document.getElementById('edit-task-description').value;
-        task.deadline = document.getElementById('edit-task-deadline').value;
-        task.priority = document.getElementById('edit-task-priority').value;
-        saveState();
-        closeEditTaskModal();
-        renderApp(getCurrentUser());
-    }
+    const updatedData = {
+        title: document.getElementById('edit-task-title').value,
+        description: document.getElementById('edit-task-description').value,
+        deadline: document.getElementById('edit-task-deadline').value,
+        priority: document.getElementById('edit-task-priority').value
+    };
+    await updateTask(taskId, updatedData);
+    closeEditTaskModal();
 });
 
 showTaskFormBtn.addEventListener('click', () => {
     taskCreationForm.classList.toggle('hidden');
 });
 
-submitNewTaskBtn.addEventListener('click', () => {
+submitNewTaskBtn.addEventListener('click', async () => {
     const title = document.getElementById('task-title').value;
     const description = document.getElementById('task-description').value;
     const assignedToId = taskAssignedToSelect.value;
@@ -454,28 +507,31 @@ submitNewTaskBtn.addEventListener('click', () => {
     }
 
     const newTask = {
-        id: 't' + Date.now(),
         title,
         description,
         status: 'A_faire',
         assignedToId,
         deadline,
-        creatorId: getCurrentUser().id,
+        creatorId: currentUser.uid,
+        department: currentUser.department,
         priority,
         comments: [],
         report: null,
         attachment: null
     };
 
-    TASKS.push(newTask);
-    saveState();
-    taskCreationForm.classList.add('hidden');
-    document.getElementById('new-task-form').reset();
-    renderAdminDashboard();
-    showMessage('task-form-error', 'Tâche créée avec succès!', false);
+    const result = await addTask(newTask);
+    if (result.success) {
+        taskCreationForm.classList.add('hidden');
+        document.getElementById('new-task-form').reset();
+        showMessage('task-form-error', 'Tâche créée avec succès!', false);
+        // Le rendu se met à jour automatiquement
+    } else {
+        showMessage('task-form-error', `Erreur: ${result.message}`);
+    }
 });
 
-requestForm.addEventListener('submit', (e) => {
+requestForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('request-title').value;
     const type = document.getElementById('request-type').value;
@@ -487,21 +543,24 @@ requestForm.addEventListener('submit', (e) => {
     }
 
     const newRequest = {
-        id: 'r' + Date.now(),
         title,
         type,
         details,
         status: 'En_attente',
-        submitterId: getCurrentUser().id,
+        submitterId: currentUser.uid,
+        department: currentUser.department,
         observations: null,
         assignedToId: null
     };
 
-    REQUESTS.push(newRequest);
-    saveState();
-    requestForm.reset();
-    renderEmployeDashboard();
-    showMessage('request-form-error', 'Demande soumise avec succès!', false);
+    const result = await addRequest(newRequest);
+    if (result.success) {
+        requestForm.reset();
+        showMessage('request-form-error', 'Demande soumise avec succès!', false);
+        // Le rendu se met à jour automatiquement
+    } else {
+        showMessage('request-form-error', `Erreur: ${result.message}`);
+    }
 });
 
 fabAddRequest.addEventListener('click', () => {
@@ -514,6 +573,86 @@ filterPrioritySelect.addEventListener('change', renderAdminDashboard);
 filterAssigneeSelect.addEventListener('change', renderAdminDashboard);
 filterKeywordInput.addEventListener('input', renderAdminDashboard);
 
+document.getElementById('view-toggle-list').addEventListener('click', () => {
+    document.getElementById('view-toggle-list').classList.add('active');
+    document.getElementById('view-toggle-kanban').classList.remove('active');
+    document.getElementById('admin-tasks-list-view').classList.remove('hidden');
+    document.getElementById('admin-tasks-kanban-view').classList.add('hidden');
+});
+
+document.getElementById('view-toggle-kanban').addEventListener('click', () => {
+    document.getElementById('view-toggle-kanban').classList.add('active');
+    document.getElementById('view-toggle-list').classList.remove('active');
+    document.getElementById('admin-tasks-kanban-view').classList.remove('hidden');
+    document.getElementById('admin-tasks-list-view').classList.add('hidden');
+    renderKanbanView(TASKS);
+});
+
+function renderKanbanView(tasks) {
+    const columns = {
+        'A_faire': document.querySelector('.kanban-column[data-status="A_faire"] .kanban-column__tasks'),
+        'En_cours': document.querySelector('.kanban-column[data-status="En_cours"] .kanban-column__tasks'),
+        'Termine': document.querySelector('.kanban-column[data-status="Termine"] .kanban-column__tasks'),
+    };
+    Object.values(columns).forEach(col => col.innerHTML = ''); // Clear columns
+    tasks.forEach(task => {
+        if (columns[task.status]) {
+            const taskCard = renderTask(task, currentUser.role);
+            taskCard.setAttribute('draggable', true);
+            taskCard.dataset.taskId = task.id;
+            columns[task.status].appendChild(taskCard);
+        }
+    });
+
+    addDragAndDropListeners();
+}
+
+function addDragAndDropListeners() {
+    const tasks = document.querySelectorAll('.kanban-column__tasks .task-card');
+    tasks.forEach(task => {
+        task.addEventListener('dragstart', () => {
+            task.classList.add('dragging');
+        });
+        task.addEventListener('dragend', () => {
+            task.classList.remove('dragging');
+        });
+    });
+
+    const columns = document.querySelectorAll('.kanban-column__tasks');
+    columns.forEach(column => {
+        column.addEventListener('dragover', e => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(column, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (afterElement == null) {
+                column.appendChild(draggable);
+            } else {
+                column.insertBefore(draggable, afterElement);
+            }
+        });
+        column.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            const taskId = document.querySelector('.dragging').dataset.taskId;
+            const newStatus = column.parentElement.dataset.status;
+            await updateTask(taskId, { status: newStatus });
+            // Le rendu se met à jour automatiquement
+        });
+    });
+}
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
 function renderSuperAdminDashboard() {
     newUserDepartmentSelect.innerHTML = '<option value="">Choisir un département...</option>';
     Object.values(DEPARTMENTS).forEach(dep => newUserDepartmentSelect.innerHTML += `<option value="${dep}">${dep}</option>`);
@@ -522,31 +661,28 @@ function renderSuperAdminDashboard() {
     [ROLES.ADMIN, ROLES.EMPLOYE].forEach(role => newUserRoleSelect.innerHTML += `<option value="${role}">${role}</option>`);
 
     superAdminUsersList.innerHTML = '';
-    Object.entries(USERS).forEach(([email, user]) => {
+    Object.values(USERS).forEach(user => {
         if (user.role !== ROLES.SUPER_ADMIN) {
             const userCard = document.createElement('div');
             userCard.className = `user-card ${user.active ? '' : 'disabled'}`;
             userCard.innerHTML = `
                 <h4>${user.name}</h4>
-                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Email:</strong> ${user.email}</p>
                 <p><strong>Rôle:</strong> ${user.role}</p>
                 <p><strong>Département:</strong> ${user.department}</p>
-                <button onclick="toggleUserStatus('${email}')" class="button button--outline">${user.active ? 'Désactiver' : 'Activer'}</button>
+                <button onclick="toggleUserStatus('${user.uid}', ${user.active})" class="button button--outline">${user.active ? 'Désactiver' : 'Activer'}</button>
             `;
             superAdminUsersList.appendChild(userCard);
         }
     });
 }
 
-function toggleUserStatus(email) {
-    if (USERS[email]) {
-        USERS[email].active = !USERS[email].active;
-        saveState();
-        renderSuperAdminDashboard();
-    }
+async function toggleUserStatus(uid, isActive) {
+    await updateUserStatus(uid, !isActive);
+    // Le rendu se met à jour automatiquement
 }
 
-createUserForm.addEventListener('submit', (e) => {
+createUserForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('new-user-name').value;
     const email = document.getElementById('new-user-email').value;
@@ -555,24 +691,19 @@ createUserForm.addEventListener('submit', (e) => {
     const role = newUserRoleSelect.value;
 
     if (!email.endsWith('@ibiocosmetics.com')) {
-        return showMessage('create-user-error', 'L\'email doit se terminer par @ibiocosmetics.com');
+        return showMessage('create-user-error', "L'email doit se terminer par @ibiocosmetics.com");
     }
-    if (USERS[email]) {
-        return showMessage('create-user-error', 'Cet utilisateur existe déjà.');
+    if (!name || !password || !department || !role) {
+        return showMessage('create-user-error', "Veuillez remplir tous les champs.");
     }
 
-    if (name && email && password && department && role) {
-        USERS[email] = {
-            id: 'u' + Date.now(),
-            name,
-            password,
-            role,
-            department,
-            active: true
-        };
-        saveState();
+    const result = await signUp(email, password, name, role, department);
+    if (result.success) {
         createUserForm.reset();
+        showMessage('create-user-error', 'Utilisateur créé avec succès!', false);
         renderSuperAdminDashboard();
+    } else {
+        showMessage('create-user-error', `Erreur: ${result.message}`);
     }
 });
 
@@ -582,29 +713,15 @@ loginForm.addEventListener('submit', (e) => {
     const password = document.getElementById('password').value;
 
     if (!email.endsWith('@ibiocosmetics.com')) {
-        showMessage('login-error', 'L\'email doit se terminer par @ibiocosmetics.com');
+        showMessage('login-error', "L'email doit se terminer par @ibiocosmetics.com");
         return;
     }
-
-    const user = USERS[email];
-    if (user && user.password === password) {
-        if (!user.active) {
-            showMessage('login-error', 'Ce compte a été désactivé.');
-            return;
-        }
-        localStorage.setItem('currentUserEmail', email);
-        renderApp(user);
-    } else {
-        showMessage('login-error', 'Email ou mot de passe incorrect.');
-    }
+    signIn(email, password);
 });
 
 logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('currentUserEmail');
-    renderApp(null);
+    signOutUser();
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-    const currentUser = getCurrentUser();
-    renderApp(currentUser);
-});
+// Le rendu initial est maintenant géré par onAuthStateChanged dans auth.js
+// document.addEventListener('DOMContentLoaded', () => { ... });

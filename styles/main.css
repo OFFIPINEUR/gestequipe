@@ -213,3 +213,91 @@ section {
     background-color: var(--secondary-color);
     transform: scale(1.05);
 }
+/* ==========================================================================
+   8. KANBAN VIEW
+   ========================================================================== */
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.view-toggle .button {
+    padding: 0.5rem 1rem;
+}
+
+.view-toggle .button.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.kanban-column {
+    background-color: #e9ecef;
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+}
+
+.kanban-column__title {
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.kanban-column__tasks {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.kanban-column__tasks .task-card {
+    cursor: grab;
+}
+/* ==========================================================================
+   9. SUBTASKS
+   ========================================================================== */
+.subtasks-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtask-item label {
+    flex-grow: 1;
+}
+
+.subtask-item input[type="checkbox"]:checked + label {
+    text-decoration: line-through;
+    color: var(--light-text-color);
+}
+
+.add-subtask-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.form__input--inline {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+}
+
+.button--sm {
+    padding: 0.5rem 0.75rem;
+}

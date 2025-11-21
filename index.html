@@ -74,7 +74,13 @@
                 </form>
             </div>
 
-            <h3 class="view-container__subtitle">Toutes les Tâches</h3>
+            <div class="view-header">
+                <h3 class="view-container__subtitle">Toutes les Tâches</h3>
+                <div class="view-toggle">
+                    <button id="view-toggle-list" class="button button--outline active">Liste</button>
+                    <button id="view-toggle-kanban" class="button button--outline">Tableau</button>
+                </div>
+            </div>
             <div class="filters">
                 <input type="text" id="filter-keyword" class="form__input" placeholder="Rechercher par mot-clé...">
                 <select id="filter-status" class="form__input">
@@ -93,7 +99,21 @@
                     <option value="all">Tous les membres</option>
                 </select>
             </div>
-            <div id="admin-tasks-list" class="grid-container"></div>
+            <div id="admin-tasks-list-view" class="grid-container"></div>
+            <div id="admin-tasks-kanban-view" class="kanban-board hidden">
+                <div class="kanban-column" data-status="A_faire">
+                    <h4 class="kanban-column__title">À Faire</h4>
+                    <div class="kanban-column__tasks"></div>
+                </div>
+                <div class="kanban-column" data-status="En_cours">
+                    <h4 class="kanban-column__title">En Cours</h4>
+                    <div class="kanban-column__tasks"></div>
+                </div>
+                <div class="kanban-column" data-status="Termine">
+                    <h4 class="kanban-column__title">Terminé</h4>
+                    <div class="kanban-column__tasks"></div>
+                </div>
+            </div>
 
             <h3 class="view-container__subtitle">Demandes des Membres</h3>
             <div id="admin-requests-list" class="grid-container"></div>
@@ -225,6 +245,17 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
     </button>
 
+    <!-- SDK Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+    <!-- Configuration et services -->
+    <script src="scripts/firebase-config.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/firestore.js"></script>
+
+    <!-- Script principal de l'application -->
     <script src="scripts/app.js"></script>
 </body>
 </html>
