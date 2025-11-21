@@ -207,7 +207,11 @@ function renderTask(task, userRole) {
     const taskEl = document.createElement('div');
     taskEl.className = `task-card status-${task.status} priority-${task.priority}`;
     const creator = USERS[task.creatorId];
-    let taskHTML = `<h4>${task.title}</h4>
+    let taskHTML = `
+        <div class="task-card__header">
+            <h4>${task.title}</h4>
+            ${task.googleCalendarEventId ? '<span class="calendar-icon">📅</span>' : ''}
+        </div>
         <p><strong>Statut:</strong> ${task.status.replace('_', ' ')}</p>
         <p><strong>Date Limite:</strong> ${task.deadline}</p>
         <div class="task-details hidden">
@@ -261,6 +265,17 @@ function renderTask(task, userRole) {
             openEditTaskModal(task.id);
         };
         taskEl.appendChild(editBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'button button--danger';
+        deleteBtn.textContent = 'Supprimer';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`Voulez-vous vraiment supprimer la tâche "${task.title}" ?`)) {
+                deleteTask(task.id, task.googleCalendarEventId);
+            }
+        };
+        taskEl.appendChild(deleteBtn);
     }
 
     const chatSection = document.createElement('div');
@@ -482,6 +497,13 @@ editTaskForm.addEventListener('submit', async (e) => {
         priority: document.getElementById('edit-task-priority').value
     };
     await updateTask(taskId, updatedData);
+
+    // Mettre à jour l'événement Google Calendar s'il existe
+    const task = TASKS.find(t => t.id === taskId);
+    if (task && task.googleCalendarEventId) {
+        await updateCalendarEvent(task.googleCalendarEventId, { ...task, ...updatedData });
+    }
+
     closeEditTaskModal();
 });
 
@@ -525,7 +547,13 @@ submitNewTaskBtn.addEventListener('click', async () => {
         taskCreationForm.classList.add('hidden');
         document.getElementById('new-task-form').reset();
         showMessage('task-form-error', 'Tâche créée avec succès!', false);
-        // Le rendu se met à jour automatiquement
+
+        // Synchroniser avec Google Calendar si l'utilisateur est authentifié
+        if (gapi.client.getToken() !== null) {
+            const createdEvent = await createCalendarEvent({ ...newTask, id: result.taskId });
+            // Stocker l'ID de l'événement Google Calendar dans la tâche Firestore
+            await updateTask(result.taskId, { googleCalendarEventId: createdEvent.id });
+        }
     } else {
         showMessage('task-form-error', `Erreur: ${result.message}`);
     }
@@ -725,3 +753,14 @@ logoutBtn.addEventListener('click', () => {
 
 // Le rendu initial est maintenant géré par onAuthStateChanged dans auth.js
 // document.addEventListener('DOMContentLoaded', () => { ... });
+
+async function deleteTask(taskId, googleCalendarEventId) {
+    // Supprimer l'événement du calendrier Google s'il existe
+    if (googleCalendarEventId) {
+        await deleteCalendarEvent(googleCalendarEventId);
+    }
+
+    // Supprimer la tâche de Firestore
+    await deleteTaskFromDb(taskId);
+    // Le rendu se mettra à jour automatiquement grâce à onSnapshot
+}

@@ -56,10 +56,24 @@ function onRequestsUpdate(department, callback) {
  */
 async function addTask(taskData) {
     try {
-        await db.collection('tasks').add(taskData);
-        return { success: true };
+        const docRef = await db.collection('tasks').add(taskData);
+        return { success: true, taskId: docRef.id };
     } catch (error) {
         console.error("Erreur lors de l'ajout de la tâche:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Supprime une tâche de Firestore.
+ * @param {string} taskId
+ */
+async function deleteTaskFromDb(taskId) {
+    try {
+        await db.collection('tasks').doc(taskId).delete();
+        return { success: true };
+    } catch (error) {
+        console.error("Erreur lors de la suppression de la tâche:", error);
         return { success: false, message: error.message };
     }
 }
