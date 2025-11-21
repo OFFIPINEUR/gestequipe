@@ -1,14 +1,15 @@
 // scripts/firebase-config.js
 
-// Configuration du projet Firebase fournie par l'utilisateur.
+// IMPORTANT: Remplacez cet objet par la configuration de VOTRE projet Firebase
+// Allez sur la console Firebase > Paramètres du projet > Général > Vos applications
 const firebaseConfig = {
-  apiKey: "AIzaSyDTdIoh4bg-Z-F03qAPpyqHbQxGEJwEhPg",
-  authDomain: "workflowapp-81fc2.firebaseapp.com",
-  projectId: "workflowapp-81fc2",
-  storageBucket: "workflowapp-81fc2.firebasestorage.app",
-  messagingSenderId: "689663027362",
-  appId: "1:689663027362:web:861273e7614c312b18cffb",
-  measurementId: "G-9BLV5HDVM8"
+  apiKey: "VOTRE_API_KEY",
+  authDomain: "VOTRE_AUTH_DOMAIN",
+  projectId: "VOTRE_PROJECT_ID",
+  storageBucket: "VOTRE_STORAGE_BUCKET",
+  messagingSenderId: "VOTRE_MESSAGING_SENDER_ID",
+  appId: "VOTRE_APP_ID",
+  measurementId: "VOTRE_MEASUREMENT_ID"
 };
 
 // Initialiser Firebase

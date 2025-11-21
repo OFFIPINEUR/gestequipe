@@ -130,15 +130,6 @@ section {
     color: white;
 }
 
-.button--danger {
-    background-color: #dc3545;
-    border-color: #dc3545;
-}
-
-.button--danger:hover {
-    background-color: #c82333;
-}
-
 /* ==========================================================================
    5. CARDS
    ========================================================================== */
@@ -158,17 +149,6 @@ section {
 .user-card.disabled {
     opacity: 0.5;
 }
-
-.task-card__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.calendar-icon {
-    font-size: 1.2rem;
-}
-
 
 /* ==========================================================================
    6. MODAL
