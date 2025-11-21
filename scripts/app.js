@@ -12,15 +12,11 @@ const DEPARTMENTS = {
     TECH: 'Technique'
 };
 
-// --- DONNÉES DE L'APPLICATION ---
-let currentUser = null; // L'objet utilisateur connecté sera stocké ici
-
-// Données temporaires en attendant Firestore
+let currentUser = null;
 let USERS = {};
 let TASKS = [];
 let REQUESTS = [];
 
-// --- Éléments du DOM ---
 const views = {
     login: document.getElementById('login-view'),
     admin: document.getElementById('admin-view'),
@@ -29,6 +25,9 @@ const views = {
 };
 const loginForm = document.getElementById('login-form');
 const logoutBtn = document.getElementById('logout-btn');
+const mainApp = document.getElementById('main-app');
+const sidebarNav = document.getElementById('sidebar-nav');
+const userRoleDisplay = document.getElementById('user-role');
 const createUserForm = document.getElementById('create-user-form');
 const newUserDepartmentSelect = document.getElementById('new-user-department');
 const newUserRoleSelect = document.getElementById('new-user-role');
@@ -55,42 +54,79 @@ const filterAssigneeSelect = document.getElementById('filter-assignee');
 const adminDashboardMetrics = document.getElementById('admin-dashboard-metrics');
 const memberPriorities = document.getElementById('member-priorities');
 
-// --- FONCTIONS UTILITAIRES ---
-function hideAllViews() {
+function showView(viewId) {
     Object.values(views).forEach(view => view.classList.add('hidden'));
-}
-
-function showMessage(elementId, message, isError = true) {
-    const el = document.getElementById(elementId);
-    if (el) {
-        el.textContent = message;
-        el.style.color = isError ? 'red' : 'green';
-        setTimeout(() => el.textContent = '', 3000);
+    if (views[viewId]) {
+        views[viewId].classList.remove('hidden');
     }
+    document.querySelectorAll('.sidebar__nav a').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${viewId}`) {
+            link.classList.add('active');
+        }
+    });
 }
 
-// --- GESTION DES VUES ---
 function renderApp(user) {
-    currentUser = user; // Met à jour l'utilisateur courant global
-    hideAllViews();
-
+    currentUser = user;
     if (!currentUser) {
+        mainApp.classList.add('hidden');
         views.login.classList.remove('hidden');
-        document.getElementById('user-info').classList.add('hidden');
+        fabAddRequest.classList.add('hidden');
         return;
     }
 
-    document.getElementById('user-info').classList.remove('hidden');
-    document.getElementById('user-role').textContent = `${currentUser.name} (${currentUser.role})`;
+    mainApp.classList.remove('hidden');
+    views.login.classList.add('hidden');
+    userRoleDisplay.textContent = `${currentUser.name} (${currentUser.role})`;
+    setupNavigation();
+    showViewBasedOnRole();
+
+    if (currentUser.role === ROLES.EMPLOYE) {
+        fabAddRequest.classList.remove('hidden');
+    } else {
+        fabAddRequest.classList.add('hidden');
+    }
+}
+
+function setupNavigation() {
+    sidebarNav.innerHTML = '';
+    let navLinks = [];
 
     if (currentUser.role === ROLES.SUPER_ADMIN) {
-        views.superAdmin.classList.remove('hidden');
+        navLinks.push({ view: 'superAdmin', icon: 'settings', text: 'Administration' });
+    } else if (currentUser.role === ROLES.ADMIN) {
+        navLinks.push({ view: 'admin', icon: 'grid', text: 'Tableau de Bord' });
+    } else { // EMPLOYE
+        navLinks.push({ view: 'member', icon: 'user', text: 'Mon Espace' });
+    }
+
+    navLinks.forEach(link => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="#${link.view}"><i data-feather="${link.icon}"></i><span>${link.text}</span></a>`;
+        sidebarNav.appendChild(li);
+    });
+
+    feather.replace();
+
+    sidebarNav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const viewId = e.currentTarget.getAttribute('href').substring(1);
+            showView(viewId);
+        });
+    });
+}
+
+function showViewBasedOnRole() {
+    if (currentUser.role === ROLES.SUPER_ADMIN) {
+        showView('superAdmin');
         onUsersUpdate(users => {
             USERS = users;
             renderSuperAdminDashboard();
         });
     } else if (currentUser.role === ROLES.ADMIN) {
-        views.admin.classList.remove('hidden');
+        showView('admin');
         onUsersUpdate(users => {
             USERS = users;
             onTasksUpdate(currentUser.department, tasks => {
@@ -102,7 +138,7 @@ function renderApp(user) {
             });
         });
     } else { // EMPLOYE
-        views.member.classList.remove('hidden');
+        showView('member');
         onTasksUpdate(currentUser.department, tasks => {
             TASKS = tasks.filter(t => t.assignedToId === currentUser.uid);
             onRequestsUpdate(currentUser.department, requests => {
@@ -112,13 +148,11 @@ function renderApp(user) {
         });
     }
 }
-
 function renderAdminDashboard() {
     const departmentMembers = Object.values(USERS).filter(u => u.department === currentUser.department && u.active);
 
-    let departmentTasks = TASKS; // Déjà filtré par département dans onTasksUpdate
+    let departmentTasks = TASKS;
 
-    // Metrics
     const tasksInProgress = departmentTasks.filter(t => t.status === 'En_cours').length;
     const overdueTasks = departmentTasks.filter(t => new Date(t.deadline) < new Date() && t.status !== 'Termine').length;
     const pendingRequests = REQUESTS.filter(r => r.status === 'En_attente').length;
@@ -137,7 +171,6 @@ function renderAdminDashboard() {
         </div>
     `;
 
-    // Filtering logic...
     const statusFilter = filterStatusSelect.value;
     const priorityFilter = filterPrioritySelect.value;
     const keywordFilter = filterKeywordInput.value.toLowerCase();
@@ -148,20 +181,16 @@ function renderAdminDashboard() {
     if (assigneeFilter !== 'all') departmentTasks = departmentTasks.filter(t => t.assignedToId === assigneeFilter);
     if (keywordFilter) departmentTasks = departmentTasks.filter(t => t.title.toLowerCase().includes(keywordFilter) || t.description.toLowerCase().includes(keywordFilter));
 
-    const adminTasksListView = document.getElementById('admin-tasks-list-view');
     adminTasksListView.innerHTML = '';
     departmentTasks.forEach(task => adminTasksListView.appendChild(renderTask(task, ROLES.ADMIN)));
 
-    // Mettre à jour la vue Kanban si elle est visible
     if (!document.getElementById('admin-tasks-kanban-view').classList.contains('hidden')) {
         renderKanbanView(departmentTasks);
     }
-    // Mettre à jour la vue Calendrier si elle est visible
     if (!document.getElementById('admin-tasks-calendar-view').classList.contains('hidden')) {
         renderCalendarView(departmentTasks);
     }
 
-    const adminRequestsList = document.getElementById('admin-requests-list');
     adminRequestsList.innerHTML = '';
     REQUESTS.forEach(req => adminRequestsList.appendChild(renderRequest(req)));
 
@@ -172,11 +201,8 @@ function renderAdminDashboard() {
         filterAssigneeSelect.innerHTML += `<option value="${emp.uid}">${emp.name}</option>`;
     });
 }
-
 function renderEmployeDashboard() {
-    const myTasks = TASKS; // Déjà filtré dans onTasksUpdate
-
-    // Priorities
+    const myTasks = TASKS;
     const today = new Date();
     const urgentTasks = myTasks.filter(t => {
         const deadline = new Date(t.deadline);
@@ -324,7 +350,6 @@ async function addComment(taskId) {
     if (text && currentUser) {
         const task = TASKS.find(t => t.id === taskId);
         if (task) {
-            // Détection des mentions
             const mentions = text.match(/@(\w+)/g);
             if (mentions) {
                 mentions.forEach(mention => {
@@ -342,14 +367,13 @@ async function addComment(taskId) {
                 userId: currentUser.uid,
                 userName: currentUser.name,
                 role: currentUser.role,
-                htmlText: text, // Stocker le texte avec HTML
+                htmlText: text,
                 timestamp
             };
-            const updatedComments = [...task.comments, newComment];
+            const updatedComments = [...(task.comments || []), newComment];
             const result = await updateTask(taskId, { comments: updatedComments });
             if (result.success) {
                 input.value = '';
-                // Le rendu se met à jour automatiquement
             } else {
                 showMessage(`comment-error-${taskId}`, 'Erreur envoi commentaire.');
             }
@@ -412,19 +436,15 @@ function renderRequest(req) {
 
     return requestEl;
 }
-
 async function updateRequestStatus(reqId, newStatus, observations) {
     await updateRequest(reqId, { status: newStatus, observations });
-    // Le rendu se met à jour automatiquement grâce à onSnapshot
 }
 
 async function reassignRequest(reqId, assignedToId) {
     if (assignedToId) {
         await updateRequest(reqId, { assignedToId });
-        // Le rendu se met à jour automatiquement grâce à onSnapshot
     }
 }
-
 function openTaskReportModal(taskId) {
     document.getElementById('task-report-task-id').value = taskId;
     taskReportModal.classList.remove('hidden');
@@ -480,8 +500,6 @@ taskReportForm.addEventListener('submit', async (e) => {
     };
     if (attachmentInput.files.length > 0) {
         updateData.attachment = attachmentInput.files[0].name;
-        // Ici, il faudrait uploader le fichier sur Firebase Storage,
-        // pour l'instant on ne stocke que le nom.
     }
     await updateTask(taskId, updateData);
     closeTaskReportModal();
@@ -540,7 +558,6 @@ submitNewTaskBtn.addEventListener('click', async () => {
         taskCreationForm.classList.add('hidden');
         document.getElementById('new-task-form').reset();
         showMessage('task-form-error', 'Tâche créée avec succès!', false);
-        // Le rendu se met à jour automatiquement
     } else {
         showMessage('task-form-error', `Erreur: ${result.message}`);
     }
@@ -572,7 +589,6 @@ requestForm.addEventListener('submit', async (e) => {
     if (result.success) {
         requestForm.reset();
         showMessage('request-form-error', 'Demande soumise avec succès!', false);
-        // Le rendu se met à jour automatiquement
     } else {
         showMessage('request-form-error', `Erreur: ${result.message}`);
     }
@@ -647,7 +663,7 @@ function renderKanbanView(tasks) {
         'En_cours': document.querySelector('.kanban-column[data-status="En_cours"] .kanban-column__tasks'),
         'Termine': document.querySelector('.kanban-column[data-status="Termine"] .kanban-column__tasks'),
     };
-    Object.values(columns).forEach(col => col.innerHTML = ''); // Clear columns
+    Object.values(columns).forEach(col => col.innerHTML = '');
     tasks.forEach(task => {
         if (columns[task.status]) {
             const taskCard = renderTask(task, currentUser.role);
@@ -659,7 +675,6 @@ function renderKanbanView(tasks) {
 
     addDragAndDropListeners();
 }
-
 function addDragAndDropListeners() {
     const tasks = document.querySelectorAll('.kanban-column__tasks .task-card');
     tasks.forEach(task => {
@@ -688,7 +703,6 @@ function addDragAndDropListeners() {
             const taskId = document.querySelector('.dragging').dataset.taskId;
             const newStatus = column.parentElement.dataset.status;
             await updateTask(taskId, { status: newStatus });
-            // Le rendu se met à jour automatiquement
         });
     });
 }
@@ -729,10 +743,8 @@ function renderSuperAdminDashboard() {
         }
     });
 }
-
 async function toggleUserStatus(uid, isActive) {
     await updateUserStatus(uid, !isActive);
-    // Le rendu se met à jour automatiquement
 }
 
 createUserForm.addEventListener('submit', async (e) => {
@@ -759,7 +771,6 @@ createUserForm.addEventListener('submit', async (e) => {
         showMessage('create-user-error', `Erreur: ${result.message}`);
     }
 });
-
 loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value;
@@ -771,16 +782,17 @@ loginForm.addEventListener('submit', (e) => {
     }
     signIn(email, password);
 });
-
 logoutBtn.addEventListener('click', () => {
     signOutUser();
 });
-
-// Le rendu initial est maintenant géré par onAuthStateChanged dans auth.js
-// document.addEventListener('DOMContentLoaded', () => { ... });
-
 async function deleteTask(taskId) {
-    // Supprimer la tâche de Firestore
     await deleteTaskFromDb(taskId);
-    // Le rendu se mettra à jour automatiquement grâce à onSnapshot
+}
+function showMessage(elementId, message, isError = true) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.textContent = message;
+        el.style.color = isError ? 'red' : 'green';
+        setTimeout(() => el.textContent = '', 3000);
+    }
 }

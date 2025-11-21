@@ -5,21 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WorkFlow - Gestion d'Équipe</title>
     <link rel="stylesheet" href="styles/main.css">
-    <!-- FullCalendar CSS -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="favicon.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body>
-    <header class="header">
-        <h1 class="header__title">WorkFlow</h1>
-        <div id="user-info" class="header__user-info">
-            <span id="user-role"></span>
-            <button id="logout-btn" class="button button--outline">Déconnexion</button>
-        </div>
-    </header>
-
-    <main id="app-container" class="app-container">
+    <div id="app-container">
         <section id="login-view" class="view-container">
             <div class="form-card">
                 <h2 class="form-card__title">Connexion</h2>
@@ -38,230 +31,239 @@
             </div>
         </section>
 
-        <section id="admin-view" class="view-container hidden">
-            <h2 class="view-container__title">Tableau de Bord Admin</h2>
-            <div id="admin-dashboard-metrics" class="grid-container"></div>
-            <button id="show-task-form" class="button button--primary">Créer une Tâche</button>
-            <div id="task-creation-form" class="form-card hidden">
-                <h3 class="form-card__title">Nouvelle Tâche</h3>
-                <form id="new-task-form" class="form">
-                    <div class="form__group">
-                        <label for="task-title" class="form__label">Titre</label>
-                        <input type="text" id="task-title" class="form__input" placeholder="Titre de la tâche" required>
+        <div id="main-app" class="hidden">
+            <nav class="sidebar">
+                <div class="sidebar__header">
+                    <h1 class="sidebar__title">WorkFlow</h1>
+                </div>
+                <ul id="sidebar-nav" class="sidebar__nav">
+                    <!-- Les liens de navigation seront injectés ici par le JS -->
+                </ul>
+                <div id="user-info" class="sidebar__user-info">
+                    <span id="user-role"></span>
+                    <button id="logout-btn" class="button button--secondary">
+                        <i data-feather="log-out"></i>
+                        <span>Déconnexion</span>
+                    </button>
+                </div>
+            </nav>
+
+            <main class="main-content">
+                <section id="admin-view" class="view-container hidden">
+                    <h2 class="view-container__title">Tableau de Bord Admin</h2>
+                    <div id="admin-dashboard-metrics" class="grid-container"></div>
+                    <button id="show-task-form" class="button button--primary">Créer une Tâche</button>
+                    <div id="task-creation-form" class="form-card hidden">
+                        <h3 class="form-card__title">Nouvelle Tâche</h3>
+                        <form id="new-task-form" class="form">
+                            <div class="form__group">
+                                <label for="task-title" class="form__label">Titre</label>
+                                <input type="text" id="task-title" class="form__input" placeholder="Titre de la tâche" required>
+                            </div>
+                            <div class="form__group">
+                                <label for="task-description" class="form__label">Description</label>
+                                <textarea id="task-description" class="form__input" placeholder="Description détaillée"></textarea>
+                            </div>
+                            <div class="form__group">
+                                <label for="task-assigned-to" class="form__label">Assigner à</label>
+                                <select id="task-assigned-to" class="form__input" required>
+                                    <option value="">Choisir un membre</option>
+                                </select>
+                            </div>
+                            <div class="form__group">
+                                <label for="task-deadline" class="form__label">Date Limite</label>
+                                <input type="date" id="task-deadline" class="form__input" required>
+                            </div>
+                            <div class="form__group">
+                                <label for="task-priority" class="form__label">Priorité</label>
+                                <select id="task-priority" class="form__input" required>
+                                    <option value="Normale">Normale</option>
+                                    <option value="Haute">Haute</option>
+                                    <option value="Critique">Critique</option>
+                                </select>
+                            </div>
+                            <button type="button" id="submit-new-task" class="button button--primary">Ajouter Tâche</button>
+                            <p id="task-form-error" class="form__error-message"></p>
+                        </form>
                     </div>
-                    <div class="form__group">
-                        <label for="task-description" class="form__label">Description</label>
-                        <textarea id="task-description" class="form__input" placeholder="Description détaillée"></textarea>
+                    <div class="view-header">
+                        <h3 class="view-container__subtitle">Toutes les Tâches</h3>
+                        <div class="view-toggle">
+                            <button id="view-toggle-list" class="button button--outline active">Liste</button>
+                            <button id="view-toggle-kanban" class="button button--outline">Tableau</button>
+                            <button id="view-toggle-calendar" class="button button--outline">Calendrier</button>
+                        </div>
                     </div>
-                    <div class="form__group">
-                        <label for="task-assigned-to" class="form__label">Assigner à</label>
-                        <select id="task-assigned-to" class="form__input" required>
-                            <option value="">Choisir un membre</option>
+                    <div class="filters">
+                        <input type="text" id="filter-keyword" class="form__input" placeholder="Rechercher par mot-clé...">
+                        <select id="filter-status" class="form__input">
+                            <option value="all">Tous les statuts</option>
+                            <option value="A_faire">À faire</option>
+                            <option value="En_cours">En cours</option>
+                            <option value="Termine">Terminé</option>
+                        </select>
+                        <select id="filter-priority" class="form__input">
+                            <option value="all">Toutes les priorités</option>
+                            <option value="Normale">Normale</option>
+                            <option value="Haute">Haute</option>
+                            <option value="Critique">Critique</option>
+                        </select>
+                        <select id="filter-assignee" class="form__input">
+                            <option value="all">Tous les membres</option>
                         </select>
                     </div>
+                    <div id="admin-tasks-list-view" class="grid-container"></div>
+                    <div id="admin-tasks-kanban-view" class="kanban-board hidden">
+                        <div class="kanban-column" data-status="A_faire">
+                            <h4 class="kanban-column__title">À Faire</h4>
+                            <div class="kanban-column__tasks"></div>
+                        </div>
+                        <div class="kanban-column" data-status="En_cours">
+                            <h4 class="kanban-column__title">En Cours</h4>
+                            <div class="kanban-column__tasks"></div>
+                        </div>
+                        <div class="kanban-column" data-status="Termine">
+                            <h4 class="kanban-column__title">Terminé</h4>
+                            <div class="kanban-column__tasks"></div>
+                        </div>
+                    </div>
+                    <div id="admin-tasks-calendar-view" class="calendar-container hidden">
+                        <div id="calendar"></div>
+                    </div>
+                    <h3 class="view-container__subtitle">Demandes des Membres</h3>
+                    <div id="admin-requests-list" class="grid-container"></div>
+                </section>
+                <section id="member-view" class="view-container hidden">
+                    <div id="member-priorities"></div>
+                    <h2 class="view-container__title">Mes Tâches</h2>
+                    <div id="member-tasks-list" class="grid-container"></div>
+                    <h2 class="view-container__title">Faire une Demande</h2>
+                    <div class="form-card">
+                        <form id="request-form" class="form">
+                            <div class="form__group">
+                                <label for="request-title" class="form__label">Titre</label>
+                                <input type="text" id="request-title" class="form__input" placeholder="Titre de la demande" required>
+                            </div>
+                            <div class="form__group">
+                                <label for="request-type" class="form__label">Type</label>
+                                <select id="request-type" class="form__input" required>
+                                    <option value="Support">Support Technique</option>
+                                    <option value="Conges">Demande de Congés</option>
+                                    <option value="Materiel">Matériel</option>
+                                </select>
+                            </div>
+                            <div class="form__group">
+                                <label for="request-details" class="form__label">Détails</label>
+                                <textarea id="request-details" class="form__input" placeholder="Détails de la demande"></textarea>
+                            </div>
+                            <button type="submit" class="button button--primary">Soumettre</button>
+                            <p id="request-form-error" class="form__error-message"></p>
+                        </form>
+                    </div>
+                    <h3 class="view-container__subtitle">Mes Demandes</h3>
+                    <div id="member-requests-list" class="grid-container"></div>
+                </section>
+                <section id="super-admin-view" class="view-container hidden">
+                    <h2 class="view-container__title">Tableau de Bord Super Admin</h2>
+                    <div class="form-card">
+                        <h3 class="form-card__title">Enregistrer un Nouvel Utilisateur</h3>
+                        <form id="create-user-form" class="form">
+                            <div class="form__group">
+                                <label for="new-user-name" class="form__label">Nom complet</label>
+                                <input type="text" id="new-user-name" class="form__input" placeholder="Nom de l'utilisateur" required>
+                            </div>
+                            <div class="form__group">
+                                <label for="new-user-email" class="form__label">Email</label>
+                                <input type="email" id="new-user-email" class="form__input" placeholder="Email professionnel" required>
+                            </div>
+                            <div class="form__group">
+                                <label for="new-user-password" class="form__label">Mot de passe</label>
+                                <input type="password" id="new-user-password" class="form__input" placeholder="Mot de passe temporaire" required>
+                            </div>
+                            <div class="form__group">
+                                <label for="new-user-department" class="form__label">Département</label>
+                                <select id="new-user-department" class="form__input" required>
+                                    <option value="">Choisir un département</option>
+                                </select>
+                            </div>
+                            <div class="form__group">
+                                <label for="new-user-role" class="form__label">Rôle</label>
+                                <select id="new-user-role" class="form__input" required>
+                                    <option value="">Choisir un rôle</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="button button--primary">Enregistrer</button>
+                            <p id="create-user-error" class="form__error-message"></p>
+                        </form>
+                    </div>
+                    <h3 class="view-container__subtitle">Utilisateurs</h3>
+                    <div id="super-admin-users-list" class="grid-container"></div>
+                </section>
+            </main>
+        </div>
+        <div id="task-report-modal" class="modal hidden">
+            <div class="modal__content">
+                <span class="modal__close-button">&times;</span>
+                <h3 class="modal__title">Rapport de Tâche</h3>
+                <form id="task-report-form" class="form">
+                    <input type="hidden" id="task-report-task-id">
                     <div class="form__group">
-                        <label for="task-deadline" class="form__label">Date Limite</label>
-                        <input type="date" id="task-deadline" class="form__input" required>
+                        <label for="task-report-content" class="form__label">Rapport</label>
+                        <textarea id="task-report-content" class="form__input" placeholder="Rédigez votre rapport ici..." required></textarea>
                     </div>
                     <div class="form__group">
-                        <label for="task-priority" class="form__label">Priorité</label>
-                        <select id="task-priority" class="form__input" required>
+                        <label for="task-attachment" class="form__label">Joindre un fichier</label>
+                        <input type="file" id="task-attachment" class="form__input">
+                    </div>
+                    <button type="submit" class="button button--primary">Soumettre le Rapport</button>
+                </form>
+            </div>
+        </div>
+        <div id="edit-task-modal" class="modal hidden">
+            <div class="modal__content">
+                <span class="modal__close-button">&times;</span>
+                <h3 class="modal__title">Modifier la Tâche</h3>
+                <form id="edit-task-form" class="form">
+                    <input type="hidden" id="edit-task-id">
+                    <div class="form__group">
+                        <label for="edit-task-title" class="form__label">Titre</label>
+                        <input type="text" id="edit-task-title" class="form__input" required>
+                    </div>
+                    <div class="form__group">
+                        <label for="edit-task-description" class="form__label">Description</label>
+                        <textarea id="edit-task-description" class="form__input"></textarea>
+                    </div>
+                    <div class="form__group">
+                        <label for="edit-task-deadline" class="form__label">Date Limite</label>
+                        <input type="date" id="edit-task-deadline" class="form__input" required>
+                    </div>
+                    <div class="form__group">
+                        <label for="edit-task-priority" class="form__label">Priorité</label>
+                        <select id="edit-task-priority" class="form__input" required>
                             <option value="Normale">Normale</option>
                             <option value="Haute">Haute</option>
                             <option value="Critique">Critique</option>
                         </select>
                     </div>
-                    <button type="button" id="submit-new-task" class="button button--primary">Ajouter Tâche</button>
-                    <p id="task-form-error" class="form__error-message"></p>
-                </form>
-            </div>
-
-            <div class="view-header">
-                <h3 class="view-container__subtitle">Toutes les Tâches</h3>
-                <div class="view-toggle">
-                    <button id="view-toggle-list" class="button button--outline active">Liste</button>
-                    <button id="view-toggle-kanban" class="button button--outline">Tableau</button>
-                    <button id="view-toggle-calendar" class="button button--outline">Calendrier</button>
-                </div>
-            </div>
-            <div class="filters">
-                <input type="text" id="filter-keyword" class="form__input" placeholder="Rechercher par mot-clé...">
-                <select id="filter-status" class="form__input">
-                    <option value="all">Tous les statuts</option>
-                    <option value="A_faire">À faire</option>
-                    <option value="En_cours">En cours</option>
-                    <option value="Termine">Terminé</option>
-                </select>
-                <select id="filter-priority" class="form__input">
-                    <option value="all">Toutes les priorités</option>
-                    <option value="Normale">Normale</option>
-                    <option value="Haute">Haute</option>
-                    <option value="Critique">Critique</option>
-                </select>
-                <select id="filter-assignee" class="form__input">
-                    <option value="all">Tous les membres</option>
-                </select>
-            </div>
-            <div id="admin-tasks-list-view" class="grid-container"></div>
-            <div id="admin-tasks-kanban-view" class="kanban-board hidden">
-                <div class="kanban-column" data-status="A_faire">
-                    <h4 class="kanban-column__title">À Faire</h4>
-                    <div class="kanban-column__tasks"></div>
-                </div>
-                <div class="kanban-column" data-status="En_cours">
-                    <h4 class="kanban-column__title">En Cours</h4>
-                    <div class="kanban-column__tasks"></div>
-                </div>
-                <div class="kanban-column" data-status="Termine">
-                    <h4 class="kanban-column__title">Terminé</h4>
-                    <div class="kanban-column__tasks"></div>
-                </div>
-            </div>
-            <div id="admin-tasks-calendar-view" class="calendar-container hidden">
-                <div id="calendar"></div>
-            </div>
-
-            <h3 class="view-container__subtitle">Demandes des Membres</h3>
-            <div id="admin-requests-list" class="grid-container"></div>
-        </section>
-
-        <section id="member-view" class="view-container hidden">
-            <div id="member-priorities"></div>
-            <h2 class="view-container__title">Mes Tâches</h2>
-            <div id="member-tasks-list" class="grid-container"></div>
-            
-            <h2 class="view-container__title">Faire une Demande</h2>
-            <div class="form-card">
-                <form id="request-form" class="form">
-                    <div class="form__group">
-                        <label for="request-title" class="form__label">Titre</label>
-                        <input type="text" id="request-title" class="form__input" placeholder="Titre de la demande" required>
-                    </div>
-                    <div class="form__group">
-                        <label for="request-type" class="form__label">Type</label>
-                        <select id="request-type" class="form__input" required>
-                            <option value="Support">Support Technique</option>
-                            <option value="Conges">Demande de Congés</option>
-                            <option value="Materiel">Matériel</option>
-                        </select>
-                    </div>
-                    <div class="form__group">
-                        <label for="request-details" class="form__label">Détails</label>
-                        <textarea id="request-details" class="form__input" placeholder="Détails de la demande"></textarea>
-                    </div>
-                    <button type="submit" class="button button--primary">Soumettre</button>
-                    <p id="request-form-error" class="form__error-message"></p>
-                </form>
-            </div>
-            
-            <h3 class="view-container__subtitle">Mes Demandes</h3>
-            <div id="member-requests-list" class="grid-container"></div>
-        </section>
-
-        <section id="super-admin-view" class="view-container hidden">
-            <h2 class="view-container__title">Tableau de Bord Super Admin</h2>
-            <div class="form-card">
-                <h3 class="form-card__title">Enregistrer un Nouvel Utilisateur</h3>
-                <form id="create-user-form" class="form">
-                    <div class="form__group">
-                        <label for="new-user-name" class="form__label">Nom complet</label>
-                        <input type="text" id="new-user-name" class="form__input" placeholder="Nom de l'utilisateur" required>
-                    </div>
-                    <div class="form__group">
-                        <label for="new-user-email" class="form__label">Email</label>
-                        <input type="email" id="new-user-email" class="form__input" placeholder="Email professionnel" required>
-                    </div>
-                    <div class="form__group">
-                        <label for="new-user-password" class="form__label">Mot de passe</label>
-                        <input type="password" id="new-user-password" class="form__input" placeholder="Mot de passe temporaire" required>
-                    </div>
-                    <div class="form__group">
-                        <label for="new-user-department" class="form__label">Département</label>
-                        <select id="new-user-department" class="form__input" required>
-                            <option value="">Choisir un département</option>
-                        </select>
-                    </div>
-                    <div class="form__group">
-                        <label for="new-user-role" class="form__label">Rôle</label>
-                        <select id="new-user-role" class="form__input" required>
-                            <option value="">Choisir un rôle</option>
-                        </select>
-                    </div>
                     <button type="submit" class="button button--primary">Enregistrer</button>
-                    <p id="create-user-error" class="form__error-message"></p>
                 </form>
             </div>
-
-            <h3 class="view-container__subtitle">Utilisateurs</h3>
-            <div id="super-admin-users-list" class="grid-container"></div>
-        </section>
-    </main>
-
-    <div id="task-report-modal" class="modal hidden">
-        <div class="modal__content">
-            <span class="modal__close-button">&times;</span>
-            <h3 class="modal__title">Rapport de Tâche</h3>
-            <form id="task-report-form" class="form">
-                <input type="hidden" id="task-report-task-id">
-                <div class="form__group">
-                    <label for="task-report-content" class="form__label">Rapport</label>
-                    <textarea id="task-report-content" class="form__input" placeholder="Rédigez votre rapport ici..." required></textarea>
-                </div>
-                <div class="form__group">
-                    <label for="task-attachment" class="form__label">Joindre un fichier</label>
-                    <input type="file" id="task-attachment" class="form__input">
-                </div>
-                <button type="submit" class="button button--primary">Soumettre le Rapport</button>
-            </form>
         </div>
-    </div>
-
-    <div id="edit-task-modal" class="modal hidden">
-        <div class="modal__content">
-            <span class="modal__close-button">&times;</span>
-            <h3 class="modal__title">Modifier la Tâche</h3>
-            <form id="edit-task-form" class="form">
-                <input type="hidden" id="edit-task-id">
-                <div class="form__group">
-                    <label for="edit-task-title" class="form__label">Titre</label>
-                    <input type="text" id="edit-task-title" class="form__input" required>
-                </div>
-                <div class="form__group">
-                    <label for="edit-task-description" class="form__label">Description</label>
-                    <textarea id="edit-task-description" class="form__input"></textarea>
-                </div>
-                <div class="form__group">
-                    <label for="edit-task-deadline" class="form__label">Date Limite</label>
-                    <input type="date" id="edit-task-deadline" class="form__input" required>
-                </div>
-                <div class="form__group">
-                    <label for="edit-task-priority" class="form__label">Priorité</label>
-                    <select id="edit-task-priority" class="form__input" required>
-                        <option value="Normale">Normale</option>
-                        <option value="Haute">Haute</option>
-                        <option value="Critique">Critique</option>
-                    </select>
-                </div>
-                <button type="submit" class="button button--primary">Enregistrer</button>
-            </form>
         </div>
+        <button id="fab-add-request" class="fab hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
     </div>
-
-    <button id="fab-add-request" class="fab">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-    </button>
-
-    <!-- SDK Firebase -->
+    <script>
+        feather.replace();
+    </script>
+    <!-- Scripts Firebase et app -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-
-    <!-- Configuration et services -->
     <script src="scripts/firebase-config.js"></script>
     <script src="scripts/auth.js"></script>
     <script src="scripts/firestore.js"></script>
-
-    <!-- Script principal de l'application -->
     <script src="scripts/app.js"></script>
 </body>
 </html>
