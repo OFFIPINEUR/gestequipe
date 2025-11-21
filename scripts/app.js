@@ -156,6 +156,10 @@ function renderAdminDashboard() {
     if (!document.getElementById('admin-tasks-kanban-view').classList.contains('hidden')) {
         renderKanbanView(departmentTasks);
     }
+    // Mettre à jour la vue Calendrier si elle est visible
+    if (!document.getElementById('admin-tasks-calendar-view').classList.contains('hidden')) {
+        renderCalendarView(departmentTasks);
+    }
 
     const adminRequestsList = document.getElementById('admin-requests-list');
     adminRequestsList.innerHTML = '';
@@ -207,11 +211,7 @@ function renderTask(task, userRole) {
     const taskEl = document.createElement('div');
     taskEl.className = `task-card status-${task.status} priority-${task.priority}`;
     const creator = USERS[task.creatorId];
-    let taskHTML = `
-        <div class="task-card__header">
-            <h4>${task.title}</h4>
-            ${task.googleCalendarEventId ? '<span class="calendar-icon">📅</span>' : ''}
-        </div>
+    let taskHTML = `<h4>${task.title}</h4>
         <p><strong>Statut:</strong> ${task.status.replace('_', ' ')}</p>
         <p><strong>Date Limite:</strong> ${task.deadline}</p>
         <div class="task-details hidden">
@@ -272,7 +272,7 @@ function renderTask(task, userRole) {
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
             if (confirm(`Voulez-vous vraiment supprimer la tâche "${task.title}" ?`)) {
-                deleteTask(task.id, task.googleCalendarEventId);
+                deleteTask(task.id);
             }
         };
         taskEl.appendChild(deleteBtn);
@@ -497,13 +497,6 @@ editTaskForm.addEventListener('submit', async (e) => {
         priority: document.getElementById('edit-task-priority').value
     };
     await updateTask(taskId, updatedData);
-
-    // Mettre à jour l'événement Google Calendar s'il existe
-    const task = TASKS.find(t => t.id === taskId);
-    if (task && task.googleCalendarEventId) {
-        await updateCalendarEvent(task.googleCalendarEventId, { ...task, ...updatedData });
-    }
-
     closeEditTaskModal();
 });
 
@@ -547,13 +540,7 @@ submitNewTaskBtn.addEventListener('click', async () => {
         taskCreationForm.classList.add('hidden');
         document.getElementById('new-task-form').reset();
         showMessage('task-form-error', 'Tâche créée avec succès!', false);
-
-        // Synchroniser avec Google Calendar si l'utilisateur est authentifié
-        if (gapi.client.getToken() !== null) {
-            const createdEvent = await createCalendarEvent({ ...newTask, id: result.taskId });
-            // Stocker l'ID de l'événement Google Calendar dans la tâche Firestore
-            await updateTask(result.taskId, { googleCalendarEventId: createdEvent.id });
-        }
+        // Le rendu se met à jour automatiquement
     } else {
         showMessage('task-form-error', `Erreur: ${result.message}`);
     }
@@ -604,17 +591,55 @@ filterKeywordInput.addEventListener('input', renderAdminDashboard);
 document.getElementById('view-toggle-list').addEventListener('click', () => {
     document.getElementById('view-toggle-list').classList.add('active');
     document.getElementById('view-toggle-kanban').classList.remove('active');
+    document.getElementById('view-toggle-calendar').classList.remove('active');
     document.getElementById('admin-tasks-list-view').classList.remove('hidden');
     document.getElementById('admin-tasks-kanban-view').classList.add('hidden');
+    document.getElementById('admin-tasks-calendar-view').classList.add('hidden');
 });
 
 document.getElementById('view-toggle-kanban').addEventListener('click', () => {
     document.getElementById('view-toggle-kanban').classList.add('active');
     document.getElementById('view-toggle-list').classList.remove('active');
+    document.getElementById('view-toggle-calendar').classList.remove('active');
     document.getElementById('admin-tasks-kanban-view').classList.remove('hidden');
     document.getElementById('admin-tasks-list-view').classList.add('hidden');
+    document.getElementById('admin-tasks-calendar-view').classList.add('hidden');
     renderKanbanView(TASKS);
 });
+
+document.getElementById('view-toggle-calendar').addEventListener('click', () => {
+    document.getElementById('view-toggle-calendar').classList.add('active');
+    document.getElementById('view-toggle-list').classList.remove('active');
+    document.getElementById('view-toggle-kanban').classList.remove('active');
+    document.getElementById('admin-tasks-calendar-view').classList.remove('hidden');
+    document.getElementById('admin-tasks-list-view').classList.add('hidden');
+    document.getElementById('admin-tasks-kanban-view').classList.add('hidden');
+    renderCalendarView(TASKS);
+});
+
+function renderCalendarView(tasks) {
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listWeek'
+        },
+        events: tasks.map(task => ({
+            title: task.title,
+            start: task.deadline,
+            allDay: true,
+            extendedProps: {
+                taskId: task.id
+            }
+        })),
+        eventClick: function(info) {
+            openEditTaskModal(info.event.extendedProps.taskId);
+        }
+    });
+    calendar.render();
+}
 
 function renderKanbanView(tasks) {
     const columns = {
@@ -754,12 +779,7 @@ logoutBtn.addEventListener('click', () => {
 // Le rendu initial est maintenant géré par onAuthStateChanged dans auth.js
 // document.addEventListener('DOMContentLoaded', () => { ... });
 
-async function deleteTask(taskId, googleCalendarEventId) {
-    // Supprimer l'événement du calendrier Google s'il existe
-    if (googleCalendarEventId) {
-        await deleteCalendarEvent(googleCalendarEventId);
-    }
-
+async function deleteTask(taskId) {
     // Supprimer la tâche de Firestore
     await deleteTaskFromDb(taskId);
     // Le rendu se mettra à jour automatiquement grâce à onSnapshot
