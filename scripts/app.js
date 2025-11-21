@@ -14,10 +14,10 @@ const DEPARTMENTS = {
 
 // --- SIMULATION DE BASE DE DONNÉES ---
 let USERS = JSON.parse(localStorage.getItem('users')) || {
-    'super.admin@ibiocosmetics.com': { id: 'u0', name: 'Super Admin', role: ROLES.SUPER_ADMIN, password: 'password', department: null },
-    'admin.tech@ibiocosmetics.com': { id: 'u1', name: 'Admin Tech', role: ROLES.ADMIN, password: 'password', department: DEPARTMENTS.TECH },
-    'employe.tech@ibiocosmetics.com': { id: 'u2', name: 'Employé Tech', role: ROLES.EMPLOYE, password: 'password', department: DEPARTMENTS.TECH },
-    'comptable@ibiocosmetics.com': { id: 'u3', name: 'Comptable Finance', role: ROLES.EMPLOYE, password: 'password', department: DEPARTMENTS.FINANCE },
+    'super.admin@ibiocosmetics.com': { id: 'u0', name: 'Super Admin', role: ROLES.SUPER_ADMIN, password: 'password', department: null, active: true },
+    'admin.tech@ibiocosmetics.com': { id: 'u1', name: 'Admin Tech', role: ROLES.ADMIN, password: 'password', department: DEPARTMENTS.TECH, active: true },
+    'employe.tech@ibiocosmetics.com': { id: 'u2', name: 'Employé Tech', role: ROLES.EMPLOYE, password: 'password', department: DEPARTMENTS.TECH, active: true },
+    'comptable@ibiocosmetics.com': { id: 'u3', name: 'Comptable Finance', role: ROLES.EMPLOYE, password: 'password', department: DEPARTMENTS.FINANCE, active: true },
 };
 
 let TASKS = JSON.parse(localStorage.getItem('tasks')) || [
@@ -36,6 +36,7 @@ const views = {
     superAdmin: document.getElementById('super-admin-view')
 };
 const loginForm = document.getElementById('login-form');
+const logoutBtn = document.getElementById('logout-btn');
 const createUserForm = document.getElementById('create-user-form');
 const newUserDepartmentSelect = document.getElementById('new-user-department');
 const newUserRoleSelect = document.getElementById('new-user-role');
@@ -45,7 +46,9 @@ const adminRequestsList = document.getElementById('admin-requests-list');
 const adminTasksList = document.getElementById('admin-tasks-list');
 const taskReportModal = document.getElementById('task-report-modal');
 const taskReportForm = document.getElementById('task-report-form');
-const closeModalButton = document.querySelector('.close-button');
+const editTaskModal = document.getElementById('edit-task-modal');
+const editTaskForm = document.getElementById('edit-task-form');
+const closeModalButtons = document.querySelectorAll('.modal__close-button');
 const showTaskFormBtn = document.getElementById('show-task-form');
 const taskCreationForm = document.getElementById('task-creation-form');
 const submitNewTaskBtn = document.getElementById('submit-new-task');
@@ -55,7 +58,10 @@ const memberRequestsList = document.getElementById('member-requests-list');
 const fabAddRequest = document.getElementById('fab-add-request');
 const filterStatusSelect = document.getElementById('filter-status');
 const filterPrioritySelect = document.getElementById('filter-priority');
-
+const filterKeywordInput = document.getElementById('filter-keyword');
+const filterAssigneeSelect = document.getElementById('filter-assignee');
+const adminDashboardMetrics = document.getElementById('admin-dashboard-metrics');
+const memberPriorities = document.getElementById('member-priorities');
 
 // --- FONCTIONS UTILITAIRES ---
 function saveState() {
@@ -66,7 +72,8 @@ function saveState() {
 
 function getCurrentUser() {
     const email = localStorage.getItem('currentUserEmail');
-    return USERS[email] || null;
+    const user = USERS[email];
+    return user && user.active ? user : null;
 }
 
 function hideAllViews() {
@@ -104,57 +111,85 @@ function renderApp(user) {
 
 function renderAdminDashboard() {
     const currentUser = getCurrentUser();
-    const departmentMembers = Object.values(USERS).filter(u => u.department === currentUser.department);
+    const departmentMembers = Object.values(USERS).filter(u => u.department === currentUser.department && u.active);
     const departmentMemberIds = departmentMembers.map(u => u.id);
 
-    // Filter tasks
     let departmentTasks = Object.values(TASKS).filter(t => departmentMemberIds.includes(t.assignedToId));
+
+    // Metrics
+    const tasksInProgress = departmentTasks.filter(t => t.status === 'En_cours').length;
+    const overdueTasks = departmentTasks.filter(t => new Date(t.deadline) < new Date() && t.status !== 'Termine').length;
+    const pendingRequests = Object.values(REQUESTS).filter(r => departmentMemberIds.includes(r.submitterId) && r.status === 'En_attente').length;
+    adminDashboardMetrics.innerHTML = `
+        <div class="metric-card">
+            <h4>Tâches en cours</h4>
+            <p>${tasksInProgress}</p>
+        </div>
+        <div class="metric-card">
+            <h4>Tâches en retard</h4>
+            <p>${overdueTasks}</p>
+        </div>
+        <div class="metric-card">
+            <h4>Demandes en attente</h4>
+            <p>${pendingRequests}</p>
+        </div>
+    `;
+
+    // Filtering logic...
     const statusFilter = filterStatusSelect.value;
     const priorityFilter = filterPrioritySelect.value;
+    const keywordFilter = filterKeywordInput.value.toLowerCase();
+    const assigneeFilter = filterAssigneeSelect.value;
 
-    if (statusFilter !== 'all') {
-        departmentTasks = departmentTasks.filter(t => t.status === statusFilter);
-    }
-    if (priorityFilter !== 'all') {
-        departmentTasks = departmentTasks.filter(t => t.priority === priorityFilter);
-    }
+    if (statusFilter !== 'all') departmentTasks = departmentTasks.filter(t => t.status === statusFilter);
+    if (priorityFilter !== 'all') departmentTasks = departmentTasks.filter(t => t.priority === priorityFilter);
+    if (assigneeFilter !== 'all') departmentTasks = departmentTasks.filter(t => t.assignedToId === assigneeFilter);
+    if (keywordFilter) departmentTasks = departmentTasks.filter(t => t.title.toLowerCase().includes(keywordFilter) || t.description.toLowerCase().includes(keywordFilter));
 
-    // Render tasks
     adminTasksList.innerHTML = '';
-    departmentTasks.forEach(task => {
-        adminTasksList.appendChild(renderTask(task, ROLES.ADMIN));
-    });
+    departmentTasks.forEach(task => adminTasksList.appendChild(renderTask(task, ROLES.ADMIN)));
 
-    // Render requests
     adminRequestsList.innerHTML = '';
     const departmentRequests = Object.values(REQUESTS).filter(r => departmentMemberIds.includes(r.submitterId));
-    departmentRequests.forEach(req => {
-        adminRequestsList.appendChild(renderRequest(req));
-    });
+    departmentRequests.forEach(req => adminRequestsList.appendChild(renderRequest(req)));
 
-    // Populate 'Assign To' dropdown
     taskAssignedToSelect.innerHTML = '<option value="">Assigner à...</option>';
-    const employees = departmentMembers.filter(u => u.role === ROLES.EMPLOYE);
-    employees.forEach(emp => {
+    filterAssigneeSelect.innerHTML = '<option value="all">Tous les membres</option>';
+    departmentMembers.filter(u => u.role === ROLES.EMPLOYE).forEach(emp => {
         taskAssignedToSelect.innerHTML += `<option value="${emp.id}">${emp.name}</option>`;
+        filterAssigneeSelect.innerHTML += `<option value="${emp.id}">${emp.name}</option>`;
     });
 }
 
-
 function renderEmployeDashboard() {
-    // Render tasks
-    memberTasksList.innerHTML = '';
-    const myTasks = Object.values(TASKS).filter(t => t.assignedToId === getCurrentUser().id);
-    myTasks.forEach(task => {
-        memberTasksList.appendChild(renderTask(task, ROLES.EMPLOYE));
-    });
+    const currentUser = getCurrentUser();
+    const myTasks = Object.values(TASKS).filter(t => t.assignedToId === currentUser.id);
 
-    // Render requests
+    // Priorities
+    const today = new Date();
+    const urgentTasks = myTasks.filter(t => {
+        const deadline = new Date(t.deadline);
+        const diffDays = (deadline - today) / (1000 * 60 * 60 * 24);
+        return diffDays <= 3 && t.status !== 'Termine';
+    });
+    memberPriorities.innerHTML = '<h4>Mes priorités du jour</h4>';
+    if (urgentTasks.length > 0) {
+        urgentTasks.forEach(task => {
+            const priorityEl = document.createElement('div');
+            priorityEl.className = 'priority-card';
+            priorityEl.innerHTML = `<p>${task.title} - <strong>Date limite: ${task.deadline}</strong></p>`;
+            memberPriorities.appendChild(priorityEl);
+        });
+    } else {
+        memberPriorities.innerHTML += '<p>Aucune tâche urgente pour le moment.</p>';
+    }
+
+    memberTasksList.innerHTML = '';
+    myTasks.forEach(task => memberTasksList.appendChild(renderTask(task, ROLES.EMPLOYE)));
+
     memberRequestsList.innerHTML = '';
-    const myRequests = Object.values(REQUESTS).filter(r => r.submitterId === getCurrentUser().id);
+    const myRequests = Object.values(REQUESTS).filter(r => r.submitterId === currentUser.id);
     myRequests.forEach(req => {
-        // We can reuse the renderRequest function, but it might show admin controls.
-        // For now, let's create a simpler display for members.
         const reqEl = document.createElement('div');
         reqEl.className = 'request-card';
         reqEl.innerHTML = `<h4>${req.title}</h4><p>Statut: ${req.status}</p>`;
@@ -186,6 +221,7 @@ function renderTask(task, userRole) {
 
     if (userRole === ROLES.EMPLOYE && task.status === 'En_cours') {
         const completeBtn = document.createElement('button');
+        completeBtn.className = 'button button--primary';
         completeBtn.textContent = 'Marquer Terminé';
         completeBtn.onclick = (e) => {
             e.stopPropagation();
@@ -194,7 +230,17 @@ function renderTask(task, userRole) {
         taskEl.appendChild(completeBtn);
     }
 
-    // --- CHAT ---
+    if (userRole === ROLES.ADMIN) {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'button button--outline';
+        editBtn.textContent = 'Modifier';
+        editBtn.onclick = (e) => {
+            e.stopPropagation();
+            openEditTaskModal(task.id);
+        };
+        taskEl.appendChild(editBtn);
+    }
+
     const chatSection = document.createElement('div');
     chatSection.className = 'chat-section';
     chatSection.innerHTML = `
@@ -204,11 +250,10 @@ function renderTask(task, userRole) {
                 <span class="chat-timestamp">(${c.timestamp || ''})</span>
             </p>`).join('')}
         </div>
-        <input type="text" id="comment-${task.id}" placeholder="Ajouter un commentaire...">
-        <button onclick="addComment('${task.id}')">Envoyer</button>
+        <input type="text" id="comment-${task.id}" placeholder="Ajouter un commentaire..." class="form__input">
+        <button onclick="addComment('${task.id}')" class="button button--primary">Envoyer</button>
     `;
     taskEl.appendChild(chatSection);
-
 
     return taskEl;
 }
@@ -235,7 +280,6 @@ function addComment(taskId) {
     }
 }
 
-
 function renderRequest(req) {
     const requestEl = document.createElement('div');
     requestEl.className = 'request-card';
@@ -257,14 +301,17 @@ function renderRequest(req) {
     if (getCurrentUser().role === ROLES.ADMIN && req.status === 'En_attente') {
         const observationInput = document.createElement('textarea');
         observationInput.placeholder = "Ajouter une observation...";
+        observationInput.className = 'form__input';
         requestEl.appendChild(observationInput);
 
         const approveBtn = document.createElement('button');
+        approveBtn.className = 'button button--primary';
         approveBtn.textContent = 'Approuver';
         approveBtn.onclick = () => updateRequestStatus(req.id, 'Approuve', observationInput.value);
         requestEl.appendChild(approveBtn);
 
         const rejectBtn = document.createElement('button');
+        rejectBtn.className = 'button button--outline';
         rejectBtn.textContent = 'Rejeter';
         rejectBtn.onclick = () => updateRequestStatus(req.id, 'Rejete', observationInput.value);
         requestEl.appendChild(rejectBtn);
@@ -272,6 +319,7 @@ function renderRequest(req) {
 
     if (getCurrentUser().role === ROLES.ADMIN && req.status === 'Approuve' && !req.assignedToId) {
         const reassignSelect = document.createElement('select');
+        reassignSelect.className = 'form__input';
         reassignSelect.innerHTML = '<option value="">Réassigner à...</option>';
         Object.values(USERS).forEach(user => {
             reassignSelect.innerHTML += `<option value="${user.id}">${user.name}</option>`;
@@ -279,6 +327,7 @@ function renderRequest(req) {
         requestEl.appendChild(reassignSelect);
 
         const reassignBtn = document.createElement('button');
+        reassignBtn.className = 'button button--primary';
         reassignBtn.textContent = 'Réassigner';
         reassignBtn.onclick = () => reassignRequest(req.id, reassignSelect.value);
         requestEl.appendChild(reassignBtn);
@@ -306,8 +355,6 @@ function reassignRequest(reqId, assignedToId) {
     }
 }
 
-
-// --- FONCTIONNALITÉS DE RAPPORT DE TÂCHE ---
 function openTaskReportModal(taskId) {
     document.getElementById('task-report-task-id').value = taskId;
     taskReportModal.classList.remove('hidden');
@@ -318,10 +365,36 @@ function closeTaskReportModal() {
     taskReportForm.reset();
 }
 
-closeModalButton.addEventListener('click', closeTaskReportModal);
+function openEditTaskModal(taskId) {
+    const task = TASKS.find(t => t.id === taskId);
+    if (task) {
+        document.getElementById('edit-task-id').value = task.id;
+        document.getElementById('edit-task-title').value = task.title;
+        document.getElementById('edit-task-description').value = task.description;
+        document.getElementById('edit-task-deadline').value = task.deadline;
+        document.getElementById('edit-task-priority').value = task.priority;
+        editTaskModal.classList.remove('hidden');
+    }
+}
+
+function closeEditTaskModal() {
+    editTaskModal.classList.add('hidden');
+    editTaskForm.reset();
+}
+
+closeModalButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        closeTaskReportModal();
+        closeEditTaskModal();
+    });
+});
+
 window.addEventListener('click', (event) => {
     if (event.target == taskReportModal) {
         closeTaskReportModal();
+    }
+    if (event.target == editTaskModal) {
+        closeEditTaskModal();
     }
 });
 
@@ -344,7 +417,21 @@ taskReportForm.addEventListener('submit', (e) => {
     }
 });
 
-// --- GESTIONNAIRES D'ÉVÉNEMENTS ---
+editTaskForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const taskId = document.getElementById('edit-task-id').value;
+    const task = TASKS.find(t => t.id === taskId);
+    if (task) {
+        task.title = document.getElementById('edit-task-title').value;
+        task.description = document.getElementById('edit-task-description').value;
+        task.deadline = document.getElementById('edit-task-deadline').value;
+        task.priority = document.getElementById('edit-task-priority').value;
+        saveState();
+        closeEditTaskModal();
+        renderApp(getCurrentUser());
+    }
+});
+
 showTaskFormBtn.addEventListener('click', () => {
     taskCreationForm.classList.toggle('hidden');
 });
@@ -356,7 +443,6 @@ submitNewTaskBtn.addEventListener('click', () => {
     const deadline = document.getElementById('task-deadline').value;
     const priority = document.getElementById('task-priority').value;
 
-    // Validation
     if (!title || !assignedToId || !deadline || !priority) {
         showMessage('task-form-error', 'Veuillez remplir tous les champs obligatoires.');
         return;
@@ -383,16 +469,8 @@ submitNewTaskBtn.addEventListener('click', () => {
 
     TASKS.push(newTask);
     saveState();
-
-    // Reset and hide form
     taskCreationForm.classList.add('hidden');
-    document.getElementById('task-title').value = '';
-    document.getElementById('task-description').value = '';
-    taskAssignedToSelect.value = '';
-    document.getElementById('task-deadline').value = '';
-    document.getElementById('task-priority').value = 'Normale';
-
-
+    document.getElementById('new-task-form').reset();
     renderAdminDashboard();
     showMessage('task-form-error', 'Tâche créée avec succès!', false);
 });
@@ -431,39 +509,41 @@ fabAddRequest.addEventListener('click', () => {
     document.getElementById('request-title').focus();
 });
 
-
-// --- GESTIONNAIRES D'ÉVÉNEMENTS ---
 filterStatusSelect.addEventListener('change', renderAdminDashboard);
 filterPrioritySelect.addEventListener('change', renderAdminDashboard);
-
-showTaskFormBtn.addEventListener('click', () => {
-    taskCreationForm.classList.toggle('hidden');
-});
+filterAssigneeSelect.addEventListener('change', renderAdminDashboard);
+filterKeywordInput.addEventListener('input', renderAdminDashboard);
 
 function renderSuperAdminDashboard() {
     newUserDepartmentSelect.innerHTML = '<option value="">Choisir un département...</option>';
-    for (const key in DEPARTMENTS) {
-        newUserDepartmentSelect.innerHTML += `<option value="${DEPARTMENTS[key]}">${DEPARTMENTS[key]}</option>`;
-    }
+    Object.values(DEPARTMENTS).forEach(dep => newUserDepartmentSelect.innerHTML += `<option value="${dep}">${dep}</option>`);
 
     newUserRoleSelect.innerHTML = '<option value="">Choisir un rôle...</option>';
-    newUserRoleSelect.innerHTML += `<option value="${ROLES.ADMIN}">${ROLES.ADMIN}</option>`;
-    newUserRoleSelect.innerHTML += `<option value="${ROLES.EMPLOYE}">${ROLES.EMPLOYE}</option>`;
+    [ROLES.ADMIN, ROLES.EMPLOYE].forEach(role => newUserRoleSelect.innerHTML += `<option value="${role}">${role}</option>`);
 
     superAdminUsersList.innerHTML = '';
-    Object.values(USERS).forEach(user => {
+    Object.entries(USERS).forEach(([email, user]) => {
         if (user.role !== ROLES.SUPER_ADMIN) {
             const userCard = document.createElement('div');
-            userCard.className = 'user-card';
+            userCard.className = `user-card ${user.active ? '' : 'disabled'}`;
             userCard.innerHTML = `
                 <h4>${user.name}</h4>
-                <p><strong>Email:</strong> ${Object.keys(USERS).find(key => USERS[key] === user)}</p>
+                <p><strong>Email:</strong> ${email}</p>
                 <p><strong>Rôle:</strong> ${user.role}</p>
                 <p><strong>Département:</strong> ${user.department}</p>
+                <button onclick="toggleUserStatus('${email}')" class="button button--outline">${user.active ? 'Désactiver' : 'Activer'}</button>
             `;
             superAdminUsersList.appendChild(userCard);
         }
     });
+}
+
+function toggleUserStatus(email) {
+    if (USERS[email]) {
+        USERS[email].active = !USERS[email].active;
+        saveState();
+        renderSuperAdminDashboard();
+    }
 }
 
 createUserForm.addEventListener('submit', (e) => {
@@ -475,17 +555,20 @@ createUserForm.addEventListener('submit', (e) => {
     const role = newUserRoleSelect.value;
 
     if (!email.endsWith('@ibiocosmetics.com')) {
-        showMessage('create-user-error', 'L\'email doit se terminer par @ibiocosmetics.com');
-        return;
+        return showMessage('create-user-error', 'L\'email doit se terminer par @ibiocosmetics.com');
+    }
+    if (USERS[email]) {
+        return showMessage('create-user-error', 'Cet utilisateur existe déjà.');
     }
 
     if (name && email && password && department && role) {
         USERS[email] = {
-            id: 'u' + (Object.keys(USERS).length + 1),
+            id: 'u' + Date.now(),
             name,
             password,
             role,
-            department
+            department,
+            active: true
         };
         saveState();
         createUserForm.reset();
@@ -505,11 +588,20 @@ loginForm.addEventListener('submit', (e) => {
 
     const user = USERS[email];
     if (user && user.password === password) {
+        if (!user.active) {
+            showMessage('login-error', 'Ce compte a été désactivé.');
+            return;
+        }
         localStorage.setItem('currentUserEmail', email);
         renderApp(user);
     } else {
         showMessage('login-error', 'Email ou mot de passe incorrect.');
     }
+});
+
+logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('currentUserEmail');
+    renderApp(null);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
