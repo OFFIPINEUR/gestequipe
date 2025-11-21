@@ -1,5 +1,3 @@
-// scripts/app.js
-
 const ROLES = {
     SUPER_ADMIN: 'Super_Admin',
     ADMIN: 'Admin',
@@ -140,9 +138,9 @@ function showViewBasedOnRole() {
     } else { // EMPLOYE
         showView('member');
         onTasksUpdate(currentUser.department, tasks => {
-            TASKS = tasks.filter(t => t.assignedToId === currentUser.uid);
+            TASKS = tasks.filter(t => t.assigned_to_id === currentUser.uid);
             onRequestsUpdate(currentUser.department, requests => {
-                REQUESTS = requests.filter(r => r.submitterId === currentUser.uid);
+                REQUESTS = requests.filter(r => r.submitter_id === currentUser.uid);
                 renderEmployeDashboard();
             });
         });
@@ -178,7 +176,7 @@ function renderAdminDashboard() {
 
     if (statusFilter !== 'all') departmentTasks = departmentTasks.filter(t => t.status === statusFilter);
     if (priorityFilter !== 'all') departmentTasks = departmentTasks.filter(t => t.priority === priorityFilter);
-    if (assigneeFilter !== 'all') departmentTasks = departmentTasks.filter(t => t.assignedToId === assigneeFilter);
+    if (assigneeFilter !== 'all') departmentTasks = departmentTasks.filter(t => t.assigned_to_id === assigneeFilter);
     if (keywordFilter) departmentTasks = departmentTasks.filter(t => t.title.toLowerCase().includes(keywordFilter) || t.description.toLowerCase().includes(keywordFilter));
 
     adminTasksListView.innerHTML = '';
@@ -236,7 +234,7 @@ function renderEmployeDashboard() {
 function renderTask(task, userRole) {
     const taskEl = document.createElement('div');
     taskEl.className = `task-card status-${task.status} priority-${task.priority}`;
-    const creator = USERS[task.creatorId];
+    const creator = USERS[task.creator_id];
     let taskHTML = `<h4>${task.title}</h4>
         <p><strong>Statut:</strong> ${task.status.replace('_', ' ')}</p>
         <p><strong>Date Limite:</strong> ${task.deadline}</p>
@@ -384,7 +382,7 @@ async function addComment(taskId) {
 function renderRequest(req) {
     const requestEl = document.createElement('div');
     requestEl.className = 'request-card';
-    const submitter = USERS[req.submitterId];
+    const submitter = USERS[req.submitter_id];
     let requestHTML = `<h4>${req.title}</h4>
         <p><strong>Demandeur:</strong> ${submitter ? submitter.name : 'Inconnu'}</p>
         <p><strong>Statut:</strong> ${req.status}</p>
@@ -393,8 +391,8 @@ function renderRequest(req) {
     if (req.observations) {
         requestHTML += `<p><strong>Observations:</strong> ${req.observations}</p>`;
     }
-    if (req.assignedToId) {
-        const assignedUser = USERS[req.assignedToId];
+    if (req.assigned_to_id) {
+        const assignedUser = USERS[req.assigned_to_id];
         requestHTML += `<p><strong>Réassigné à:</strong> ${assignedUser ? assignedUser.name : 'Inconnu'}</p>`;
     }
     requestEl.innerHTML = requestHTML;
@@ -418,7 +416,7 @@ function renderRequest(req) {
         requestEl.appendChild(rejectBtn);
     }
 
-    if (currentUser.role === ROLES.ADMIN && req.status === 'Approuve' && !req.assignedToId) {
+    if (currentUser.role === ROLES.ADMIN && req.status === 'Approuve' && !req.assigned_to_id) {
         const reassignSelect = document.createElement('select');
         reassignSelect.className = 'form__input';
         reassignSelect.innerHTML = '<option value="">Réassigner à...</option>';
@@ -442,7 +440,7 @@ async function updateRequestStatus(reqId, newStatus, observations) {
 
 async function reassignRequest(reqId, assignedToId) {
     if (assignedToId) {
-        await updateRequest(reqId, { assignedToId });
+        await updateRequest(reqId, { assigned_to_id: assignedToId });
     }
 }
 function openTaskReportModal(taskId) {
@@ -543,12 +541,13 @@ submitNewTaskBtn.addEventListener('click', async () => {
         title,
         description,
         status: 'A_faire',
-        assignedToId,
+        assigned_to_id: assignedToId,
         deadline,
-        creatorId: currentUser.uid,
+        creator_id: currentUser.uid,
         department: currentUser.department,
         priority,
         comments: [],
+        subtasks: [],
         report: null,
         attachment: null
     };
@@ -579,10 +578,10 @@ requestForm.addEventListener('submit', async (e) => {
         type,
         details,
         status: 'En_attente',
-        submitterId: currentUser.uid,
+        submitter_id: currentUser.uid,
         department: currentUser.department,
         observations: null,
-        assignedToId: null
+        assigned_to_id: null
     };
 
     const result = await addRequest(newRequest);
