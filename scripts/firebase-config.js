@@ -15,6 +15,6 @@ const firebaseConfig = {
 // Initialiser Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Exporter les services pour les utiliser dans d'autres fichiers
-const auth = firebase.auth();
-const db = firebase.firestore();
+// Rendre les services accessibles globalement
+window.auth = firebase.auth();
+window.db = firebase.firestore();
