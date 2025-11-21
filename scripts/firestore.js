@@ -1,4 +1,17 @@
 // scripts/firestore.js
+import { db } from './firebase-config.js';
+import {
+    collection,
+    onSnapshot,
+    query,
+    where,
+    addDoc,
+    doc,
+    deleteDoc,
+    updateDoc,
+    orderBy,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 // --- GESTION DES DONNÉES FIRESTORE ---
 
@@ -6,8 +19,8 @@
  * Récupère tous les utilisateurs et déclenche un callback à chaque mise à jour.
  * @param {function} callback
  */
-function onUsersUpdate(callback) {
-    db.collection('users').onSnapshot(snapshot => {
+export function onUsersUpdate(callback) {
+    onSnapshot(collection(db, 'users'), snapshot => {
         const users = {};
         snapshot.forEach(doc => {
             users[doc.id] = { uid: doc.id, ...doc.data() };
@@ -21,10 +34,9 @@ function onUsersUpdate(callback) {
  * @param {string} department
  * @param {function} callback
  */
-function onTasksUpdate(department, callback) {
-    db.collection('tasks')
-      .where('department', '==', department)
-      .onSnapshot(snapshot => {
+export function onTasksUpdate(department, callback) {
+    const q = query(collection(db, 'tasks'), where('department', '==', department));
+    onSnapshot(q, snapshot => {
         const tasks = [];
         snapshot.forEach(doc => {
             tasks.push({ id: doc.id, ...doc.data() });
@@ -38,10 +50,9 @@ function onTasksUpdate(department, callback) {
  * @param {string} department
  * @param {function} callback
  */
-function onRequestsUpdate(department, callback) {
-    db.collection('requests')
-      .where('department', '==', department)
-      .onSnapshot(snapshot => {
+export function onRequestsUpdate(department, callback) {
+    const q = query(collection(db, 'requests'), where('department', '==', department));
+    onSnapshot(q, snapshot => {
         const requests = [];
         snapshot.forEach(doc => {
             requests.push({ id: doc.id, ...doc.data() });
@@ -54,9 +65,9 @@ function onRequestsUpdate(department, callback) {
  * Ajoute une nouvelle tâche dans Firestore.
  * @param {object} taskData
  */
-async function addTask(taskData) {
+export async function addTask(taskData) {
     try {
-        const docRef = await db.collection('tasks').add(taskData);
+        const docRef = await addDoc(collection(db, 'tasks'), taskData);
         return { success: true, taskId: docRef.id };
     } catch (error) {
         console.error("Erreur lors de l'ajout de la tâche:", error);
@@ -69,10 +80,9 @@ async function addTask(taskData) {
  * @param {string} chatId
  * @param {function} callback
  */
-function onMessagesUpdate(chatId, callback) {
-    db.collection('chats').doc(chatId).collection('messages')
-      .orderBy('timestamp', 'asc')
-      .onSnapshot(snapshot => {
+export function onMessagesUpdate(chatId, callback) {
+    const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
+    onSnapshot(q, snapshot => {
         const messages = [];
         snapshot.forEach(doc => {
             messages.push({ id: doc.id, ...doc.data() });
@@ -87,14 +97,14 @@ function onMessagesUpdate(chatId, callback) {
  * @param {string} receiverId
  * @param {string} text
  */
-async function sendMessage(senderId, receiverId, text) {
+export async function sendMessage(senderId, receiverId, text) {
     try {
         const chatId = [senderId, receiverId].sort().join('_');
-        await db.collection('chats').doc(chatId).collection('messages').add({
+        await addDoc(collection(db, 'chats', chatId, 'messages'), {
             senderId,
             receiverId,
             text,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: serverTimestamp()
         });
         return { success: true };
     } catch (error) {
@@ -107,9 +117,9 @@ async function sendMessage(senderId, receiverId, text) {
  * Supprime une tâche de Firestore.
  * @param {string} taskId
  */
-async function deleteTaskFromDb(taskId) {
+export async function deleteTaskFromDb(taskId) {
     try {
-        await db.collection('tasks').doc(taskId).delete();
+        await deleteDoc(doc(db, 'tasks', taskId));
         return { success: true };
     } catch (error) {
         console.error("Erreur lors de la suppression de la tâche:", error);
@@ -122,9 +132,9 @@ async function deleteTaskFromDb(taskId) {
  * @param {string} taskId
  * @param {object} updateData
  */
-async function updateTask(taskId, updateData) {
+export async function updateTask(taskId, updateData) {
     try {
-        await db.collection('tasks').doc(taskId).update(updateData);
+        await updateDoc(doc(db, 'tasks', taskId), updateData);
         return { success: true };
     } catch (error) {
         console.error("Erreur lors de la mise à jour de la tâche:", error);
@@ -136,9 +146,9 @@ async function updateTask(taskId, updateData) {
  * Ajoute une nouvelle demande dans Firestore.
  * @param {object} requestData
  */
-async function addRequest(requestData) {
+export async function addRequest(requestData) {
     try {
-        await db.collection('requests').add(requestData);
+        await addDoc(collection(db, 'requests'), requestData);
         return { success: true };
     } catch (error) {
         console.error("Erreur lors de l'ajout de la demande:", error);
@@ -151,9 +161,9 @@ async function addRequest(requestData) {
  * @param {string} requestId
  * @param {object} updateData
  */
-async function updateRequest(requestId, updateData) {
+export async function updateRequest(requestId, updateData) {
     try {
-        await db.collection('requests').doc(requestId).update(updateData);
+        await updateDoc(doc(db, 'requests', requestId), updateData);
         return { success: true };
     } catch (error) {
         console.error("Erreur lors de la mise à jour de la demande:", error);
@@ -166,9 +176,9 @@ async function updateRequest(requestId, updateData) {
  * @param {string} uid
  * @param {boolean} isActive
  */
-async function updateUserStatus(uid, isActive) {
+export async function updateUserStatus(uid, isActive) {
     try {
-        await db.collection('users').doc(uid).update({ active: isActive });
+        await updateDoc(doc(db, 'users', uid), { active: isActive });
         return { success: true };
     } catch (error) {
         console.error("Erreur lors de la mise à jour de l'utilisateur:", error);

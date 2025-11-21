@@ -1,4 +1,19 @@
 // scripts/app.js
+import { signIn, signOutUser, signUp, initSuperAdmin } from './auth.js';
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+import { getDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { auth, db } from './firebase-config.js';
+import {
+    onUsersUpdate,
+    onTasksUpdate,
+    onRequestsUpdate,
+    addTask,
+    deleteTaskFromDb,
+    updateTask,
+    addRequest,
+    updateRequest,
+    updateUserStatus
+} from './firestore.js';
 
 const ROLES = {
     SUPER_ADMIN: 'Super_Admin',
@@ -12,8 +27,8 @@ const DEPARTMENTS = {
     TECH: 'Technique'
 };
 
-let currentUser = null;
-let USERS = {};
+export let currentUser = null;
+export let USERS = {};
 let TASKS = [];
 let REQUESTS = [];
 
@@ -67,7 +82,7 @@ function showView(viewId) {
     });
 }
 
-function renderApp(user) {
+export function renderApp(user) {
     currentUser = user;
     if (!currentUser) {
         mainApp.classList.add('hidden');
@@ -771,7 +786,7 @@ createUserForm.addEventListener('submit', async (e) => {
         showMessage('create-user-error', `Erreur: ${result.message}`);
     }
 });
-loginForm.addEventListener('submit', (e) => {
+loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
@@ -780,7 +795,11 @@ loginForm.addEventListener('submit', (e) => {
         showMessage('login-error', "L'email doit se terminer par @ibiocosmetics.com");
         return;
     }
-    signIn(email, password);
+    try {
+        await signIn(email, password);
+    } catch (error) {
+        showMessage('login-error', 'Email ou mot de passe incorrect.');
+    }
 });
 logoutBtn.addEventListener('click', () => {
     signOutUser();
@@ -788,7 +807,7 @@ logoutBtn.addEventListener('click', () => {
 async function deleteTask(taskId) {
     await deleteTaskFromDb(taskId);
 }
-function showMessage(elementId, message, isError = true) {
+export function showMessage(elementId, message, isError = true) {
     const el = document.getElementById(elementId);
     if (el) {
         el.textContent = message;
@@ -796,3 +815,28 @@ function showMessage(elementId, message, isError = true) {
         setTimeout(() => el.textContent = '', 3000);
     }
 }
+
+// App initialization
+async function main() {
+    await initSuperAdmin();
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userProfile = await getDoc(doc(db, 'users', user.uid));
+            if (userProfile.exists()) {
+                const userData = { uid: user.uid, email: user.email, ...userProfile.data() };
+                if (userData.active) {
+                    renderApp(userData);
+                } else {
+                    renderApp(null);
+                    showMessage('login-error', 'Ce compte a été désactivé.');
+                }
+            } else {
+                renderApp(null);
+            }
+        } else {
+            renderApp(null);
+        }
+    });
+}
+
+main();

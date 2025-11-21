@@ -1,26 +1,26 @@
-// scripts/auth.js
+// auth.js
+import { auth, db } from './firebase-config.js';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+import { collection, doc, setDoc, getDocs, limit, query, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 // --- GESTION DE L'AUTHENTIFICATION ---
 
 /**
- * Gère l'état de connexion de l'utilisateur.
- * C'est le point d'entrée principal pour le rendu de l'application.
- */
-/**
  * Vérifie si un super admin existe et en crée un si nécessaire.
- * Doit être appelé une seule fois au démarrage de l'application.
  */
-async function initSuperAdmin() {
-    const usersRef = db.collection('users');
-    const snapshot = await usersRef.limit(1).get();
+export async function initSuperAdmin() {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, limit(1));
+    const snapshot = await getDocs(q);
+
     if (snapshot.empty) {
         console.log("Aucun utilisateur trouvé. Création du Super Admin...");
         try {
-            // Utiliser une fonction "secrète" ou un mécanisme sécurisé dans un vrai projet
             const initialUser = { email: 'super.admin@ibiocosmetics.com', password: 'password' };
-            const userCredential = await auth.createUserWithEmailAndPassword(initialUser.email, initialUser.password);
+            const userCredential = await createUserWithEmailAndPassword(auth, initialUser.email, initialUser.password);
             const user = userCredential.user;
-            await usersRef.doc(user.uid).set({
+
+            await setDoc(doc(db, 'users', user.uid), {
                 name: 'Super Admin',
                 role: 'Super_Admin',
                 department: null,
@@ -40,68 +40,34 @@ async function initSuperAdmin() {
     }
 }
 
-// Initialiser le Super Admin au chargement du script, puis l'application
-(async () => {
-    await initSuperAdmin();
-    document.body.dataset.appReady = true; // Signal pour les tests E2E
-
-    auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            const userProfile = await db.collection('users').doc(user.uid).get();
-            if (userProfile.exists) {
-                const userData = { uid: user.uid, email: user.email, ...userProfile.data() };
-                if (userData.active) {
-                    renderApp(userData);
-                } else {
-                    renderApp(null);
-                    showMessage('login-error', 'Ce compte a été désactivé.');
-                }
-            } else {
-                renderApp(null);
-            }
-        } else {
-            renderApp(null);
-        }
-    });
-})();
-
 /**
  * Connecte un utilisateur avec email et mot de passe.
- * @param {string} email
- * @param {string} password
  */
-async function signIn(email, password) {
+export async function signIn(email, password) {
     try {
-        await auth.signInWithEmailAndPassword(email, password);
+        await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
         console.error("Erreur de connexion:", error);
-        showMessage('login-error', 'Email ou mot de passe incorrect.');
+        throw error;
     }
 }
 
 /**
  * Déconnecte l'utilisateur actuel.
  */
-function signOutUser() {
-    auth.signOut();
+export function signOutUser() {
+    signOut(auth);
 }
 
 /**
  * Crée un nouvel utilisateur dans Firebase Auth et sa fiche dans Firestore.
- * @param {string} email
- * @param {string} password
- * @param {string} name
- * @param {string} role
- * @param {string} department
  */
-async function signUp(email, password, name, role, department) {
+export async function signUp(email, password, name, role, department) {
     try {
-        // Étape 1: Créer l'utilisateur dans Firebase Authentication
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Étape 2: Créer un document utilisateur dans Firestore
-        await db.collection('users').doc(user.uid).set({
+        await setDoc(doc(db, 'users', user.uid), {
             name: name,
             role: role,
             department: department,
